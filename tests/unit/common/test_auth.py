@@ -8,7 +8,7 @@ import rcbu.common.auth as auth
 def _prepare_mock_post(status, body=None):
     HTTPretty.register_uri(HTTPretty.POST, '_',
                            status=status, body=body)
-    
+
 
 class TestAuth(unittest.TestCase):
 
