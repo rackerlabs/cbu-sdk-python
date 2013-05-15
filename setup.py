@@ -12,7 +12,7 @@ def file_lines(path):
 
 setup(
     name='rackspace-backup-client',
-    version='0.0.2',
+    version='0.1.0',
     author='Alejandro Cabrera',
     author_email='alejandro.cabrera@rackspace.com',
     description='A Python client for the Rackspace Cloud Backup API.',
