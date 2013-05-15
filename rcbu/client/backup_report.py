@@ -1,5 +1,6 @@
 from rcbu.client.report import Report
 
+
 class BackupReport(Report):
     def __init__(self, report_id):
         pass

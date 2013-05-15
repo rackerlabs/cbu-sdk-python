@@ -1,5 +1,6 @@
 from rcbu.client.client import Connection as UserConnection
 
+
 class Connection(UserConnection):
     def __init__(self, username, apikey, datacenter="dfw1"):
         pass

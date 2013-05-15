@@ -1,5 +1,6 @@
 from rcbu.client.agent import Agent as UserAgent
 
+
 class Agent(UserAgent):
     def __init__(self, agent_id, password):
         self.agent_id = agent_id

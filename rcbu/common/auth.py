@@ -4,6 +4,7 @@ import requests
 
 from rcbu.common.constants import IDENTITY_TOKEN_URL
 
+
 def authenticate(apikey=None, password=None, *, username):
     if apikey:
         return _auth(username=username, apikey=apikey)
