@@ -1,4 +1,4 @@
-from python_rcbu.client.agent import Agent as UserAgent
+from rcbu.client.agent import Agent as UserAgent
 
 class Agent(UserAgent):
     def __init__(self, agent_id, password):
