@@ -28,7 +28,7 @@ def _auth(apikey=None, password=None, *, username):
     else:
         creds['apiKey'] = apikey
         auth_type = {'RAX-KSKEY:apiKeyCredentials': creds}
-        
+
     wrapper = {'auth': auth_type}
     data = json.dumps(wrapper)
     r = requests.post(IDENTITY_TOKEN_URL, data=data,
