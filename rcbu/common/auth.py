@@ -15,7 +15,7 @@ def authenticate(apikey=None, password=None, *, username):
 
 def get_token(apikey=None, password=None, *, username):
     r = authenticate(username=username, apikey=apikey, password=password)
-    return r.json()['access']['token']['id']
+    return r['access']['token']['id']
 
 
 def _auth(apikey=None, password=None, *, username):
@@ -36,4 +36,4 @@ def _auth(apikey=None, password=None, *, username):
                       headers={'content-type': 'application/json'})
     if not r.ok:
         r.raise_for_status()
-    return r
+    return r.json()
