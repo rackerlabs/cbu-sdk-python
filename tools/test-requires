@@ -1,0 +1,5 @@
+nose
+nose-progressive
+testtools
+coverage
+git+https://github.com/gabrielfalcao/HTTPretty.git
