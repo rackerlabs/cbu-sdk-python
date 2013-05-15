@@ -1,0 +1,5 @@
+.coverage
+.tox/
+coverage.xml
+nosetests.xml
+rackspace_backup_client.egg-info/
