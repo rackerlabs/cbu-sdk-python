@@ -46,6 +46,7 @@ class TestAuth(unittest.TestCase):
 
     @httprettified
     def test_get_token_returns_token_on_success(self):
-        _prepare_mock_post(status=200, body='{"access": {"token": {"id": "token"}}}')
+        _prepare_mock_post(status=200,
+                           body='{"access": {"token": {"id": "token"}}}')
         token = auth.get_token(username='b', password='good')
         self.assertEqual(token, 'token')

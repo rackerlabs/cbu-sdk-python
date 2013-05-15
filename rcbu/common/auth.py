@@ -5,7 +5,7 @@ import requests
 from rcbu.common.constants import IDENTITY_TOKEN_URL
 
 
-def authenticate(apikey=None, password=None, *, username):
+def authenticate(username, apikey=None, password=None):
     if apikey:
         return _auth(username=username, apikey=apikey)
 
@@ -13,12 +13,12 @@ def authenticate(apikey=None, password=None, *, username):
         return _auth(username=username, password=password)
 
 
-def get_token(apikey=None, password=None, *, username):
+def get_token(username, apikey=None, password=None):
     r = authenticate(username=username, apikey=apikey, password=password)
     return r['access']['token']['id']
 
 
-def _auth(apikey=None, password=None, *, username):
+def _auth(username, apikey=None, password=None):
     creds = {'username': username}
     assert password or apikey
 
