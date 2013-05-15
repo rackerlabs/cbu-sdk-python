@@ -3,3 +3,5 @@
 coverage.xml
 nosetests.xml
 rackspace_backup_client.egg-info/
+*.pyc
+*__pycache__*
