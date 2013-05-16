@@ -1,11 +1,22 @@
 class Agent(object):
-    def __init__(self, agent_id):
+    def __init__(self, agent_id,
+                 version=None, datacenter=None,
+                 vault_size=None, host=None,
+                 enabled=None, encrypted=None, os=None,
+                 machine_name=None):
         self.agent_id = agent_id
-        pass
+        self.version = version
+        self.datacenter = datacenter
+        self.vault_size = vault_size
+        self.host = host
+        self.enabled = enabled
+        self.encrypted = encrypted
+        self.os = os
+        self.machine_name = machine_name
 
     @property
     def name(self):
-        pass
+        return self.machine_name
 
     @property
     def backup_configurations(self):
