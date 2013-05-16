@@ -17,8 +17,8 @@ def agent_from_response(body):
         'os': '{} {}'.format(body['OperatingSystem'],
                              body['OperatingSystemVersion'])
     }
-    return agent.Agent(**args)
-        
+    return Agent(**args)
+
 
 def backup_config_from_response(body):
     args = {
@@ -31,7 +31,7 @@ def backup_config_from_response(body):
         'inclusions': body['Inclusions'],
         'exclusions': body['Exclusions']
     }
-    return backup_configuration.BackupConfiguration(**args)
+    return BackupConfiguration(**args)
 
 
 def backup_from_response(body):

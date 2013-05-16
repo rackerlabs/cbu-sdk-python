@@ -1,7 +1,8 @@
 import requests
 
-import rcbu.common.auth as auth
-import rcbu.client.agent as agent
+import rcbu.common.factory as factory
+from rcbu.common.auth import authenticate
+
 
 def _normalize_endpoint(url):
     idx = url.rfind('/')
@@ -24,9 +25,9 @@ class Connection(object):
         assert apikey or password
 
         if apikey:
-            resp = auth.authenticate(username, apikey=apikey)
+            resp = authenticate(username, apikey=apikey)
         else:
-            resp = auth.authenticate(username, password=password)
+            resp = authenticate(username, password=password)
 
         self.token = resp['access']['token']['id']
         endpoints = resp['access']['serviceCatalog']
@@ -45,7 +46,7 @@ class Connection(object):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [_make_agent_from_response(agent) for agent in body]
+        return [factory.agent_from_response(agent) for agent in body]
 
     @property
     def backup_configurations(self):
@@ -54,7 +55,7 @@ class Connection(object):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [_make_backup_config_from_response(config)
+        return [factory.backup_config_from_response(config)
                 for config in body]
 
     @property
@@ -109,7 +110,6 @@ class Connection(object):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         return resp.json()
-
 
     def create_backup(self, config_id):
         pass
