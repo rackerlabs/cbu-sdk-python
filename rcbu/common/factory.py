@@ -4,7 +4,7 @@ from rcbu.client.agent import Agent
 from rcbu.client.backup_configuration import BackupConfiguration
 
 
-def agent_from_response(body):
+def agent_from_response(body, connection):
     args = {
         'version': body['AgentVersion'],
         'datacenter': body['Datacenter'],
@@ -15,12 +15,13 @@ def agent_from_response(body):
         'agent_id': body['MachineAgentId'],
         'machine_name': body['MachineName'],
         'os': '{} {}'.format(body['OperatingSystem'],
-                             body['OperatingSystemVersion'])
+                             body['OperatingSystemVersion']),
+        'connection': connection
     }
     return Agent(**args)
 
 
-def backup_config_from_response(body):
+def backup_config_from_response(body, connection):
     args = {
         'config_id': body['BackupConfigurationScheduleId'],
         'agent_id': body['MachineAgentId'],
@@ -29,7 +30,15 @@ def backup_config_from_response(body):
         'frequency': body['Frequency'],
         'data_retention_days': body['VersionRetention'],
         'inclusions': body['Inclusions'],
-        'exclusions': body['Exclusions']
+        'exclusions': body['Exclusions'],
+        'email': body['NotifyRecipients'],
+        'enabled': body['IsActive'],
+        'notify_on_success': body['NotifySuccess'],
+        'notify_on_fail': body['NotifyFailure'],
+        'connection': connection,
+        'next_runtime': body['NextScheduledRunTime'],
+        'last_runtime': body['LastRunTime'],
+        'last_backup_id': body['LastRunBackupReportId']
     }
     return BackupConfiguration(**args)
 
