@@ -1,4 +1,5 @@
 import os
+import re
 from setuptools import setup, find_packages
 
 pip_requires = os.path.join(os.getcwd(), 'tools', 'pip-requires')
@@ -10,9 +11,17 @@ def file_lines(path):
         reqs = f.read().split()
     return reqs
 
+
+def parse_version():
+    data = None
+    with open('README.rst', 'rt') as f:
+        data = f.read()
+    return '.'.join(re.search(r':version: (\d)\.(\d)\.(\d)', data).groups())
+
+
 setup(
     name='rackspace-backup-client',
-    version='0.1.1',
+    version=parse_version(),
     author='Alejandro Cabrera',
     author_email='alejandro.cabrera@rackspace.com',
     description='A Python client for the Rackspace Cloud Backup API.',
