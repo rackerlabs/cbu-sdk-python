@@ -9,7 +9,7 @@ from rcbu.common.exceptions import InvalidObject
 class BackupConfiguration(Configuration):
     def __init__(self, config_id, connection,
                  agent_id=None, config_name=None, active=None,
-                 frequency=None, data_rentention_days=None,
+                 frequency=None, data_retention_days=None,
                  inclusions=None, exclusions=None,
                  email=None, enabled=None, next_runtime=None,
                  last_runtime=None, last_backup_id=None,
@@ -18,7 +18,7 @@ class BackupConfiguration(Configuration):
         self.agent_id = agent_id
         self.active = active
         self.frequency = frequency
-        self.data_retention_days = data_rentention_days
+        self.data_retention_days = data_retention_days
         self.inclusions = inclusions
         self.exclusions = exclusions
         self.email = email
