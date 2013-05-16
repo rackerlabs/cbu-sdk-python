@@ -1,4 +1,7 @@
-class Cleanup(object):
+from rcbu.client.command import Command
+
+
+class Cleanup(Command):
     def __init__(self, agent, cleanup_id):
         self.agent = agent
         self.cleanup_id = cleanup_id

@@ -1,9 +1,6 @@
-from rcbu.client.command import Command
-
-
-class Backup(Command):
-    def __init__(self, backup_id):
-        self.backup_id = backup_id
+class Command(object):
+    def __init__(self):
+        pass
 
     @property
     def running(self):
@@ -15,14 +12,6 @@ class Backup(Command):
 
     @property
     def state(self):
-        pass
-
-    @property
-    def inclusions(self):
-        pass
-
-    @property
-    def exclusions(self):
         pass
 
     def start(self):

@@ -1,4 +1,7 @@
-class Restore(object):
+from rcbu.client.command import Command
+
+
+class Restore(Command):
     def __init__(self, backup_id):
         self.backup_id = backup_id
 
