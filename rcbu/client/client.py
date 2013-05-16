@@ -46,7 +46,7 @@ class Connection(object):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [factory.agent_from_response(agent) for agent in body]
+        return [factory.agent_from_response(agent, self) for agent in body]
 
     @property
     def backup_configurations(self):
@@ -55,7 +55,7 @@ class Connection(object):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [factory.backup_config_from_response(config)
+        return [factory.backup_config_from_response(config, self)
                 for config in body]
 
     @property
@@ -101,7 +101,7 @@ class Connection(object):
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return resp.json()
+        return factory.backup_config_from_response(resp.json(), self)
 
     def get_backup_report(self, backup_id):
         url = '{}/{}/{}/{}'.format(self.endpoint, 'backup', 'report',
