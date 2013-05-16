@@ -24,6 +24,14 @@ Features
 * Easy to test (nose + tox)
 * Easy to use
 
+=======
+Install
+=======
+
+```
+pip install git+https://github.com/racker/python-cloudbackup-client
+```
+
 ============
 Contributing
 ============

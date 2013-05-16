@@ -17,7 +17,7 @@ setup(
     author_email='alejandro.cabrera@rackspace.com',
     description='A Python client for the Rackspace Cloud Backup API.',
     long_description=open('README.rst').read(),
-    url='https://github.com/cabrera/rackspace-backup-client',
+    url='https://github.com/racker/python-cloudbackup-client',
     packages=find_packages(),
     zip_safe=False,
     install_requires=file_lines(pip_requires),
