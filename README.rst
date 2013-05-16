@@ -28,9 +28,8 @@ Features
 Install
 =======
 
-```
-pip install git+https://github.com/racker/python-cloudbackup-client
-```
+.. code-block:: bash
+    pip install git+https://github.com/racker/python-cloudbackup-client
 
 ============
 Contributing
