@@ -1,4 +1,7 @@
-class Agent(object):
+from rcbu.common.show import Show
+
+
+class Agent(object, Show):
     def __init__(self, agent_id, connection,
                  version=None, datacenter=None,
                  vault_size=None, host=None,
@@ -14,9 +17,6 @@ class Agent(object):
         self.os = os
         self.machine_name = machine_name
         self.connection = connection
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
 
     def __str__(self):
         return '{}:{}'.format('Agent', self.agent_id)

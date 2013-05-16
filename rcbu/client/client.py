@@ -2,7 +2,7 @@ import requests
 
 import rcbu.common.factory as factory
 from rcbu.common.auth import authenticate
-
+from rcbu.common.show import Show
 
 def _normalize_endpoint(url):
     idx = url.rfind('/')
@@ -18,7 +18,7 @@ def _find_backup_endpoint(endpoints):
     return _normalize_endpoint(target['endpoints'][0]['publicURL'])
 
 
-class Connection(object):
+class Connection(object, Show):
 
     def __init__(self, username, apikey=None, password=None):
         resp = None
@@ -32,9 +32,6 @@ class Connection(object):
         self.token = resp['access']['token']['id']
         endpoints = resp['access']['serviceCatalog']
         self.endpoint = _find_backup_endpoint(endpoints)
-
-    def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
 
     def __str__(self):
         return '{}:{}'.format('RCBU Connection', self.endpoint)

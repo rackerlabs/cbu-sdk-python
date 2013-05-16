@@ -1,12 +1,12 @@
-class Configuration(object):
+from rcbu.common.show import Show
+
+
+class Configuration(object, Show):
     def __init__(self, config_id):
         self.config_id = config_id
 
-    def __repr__(self):
-        return '{}({})'.format(self.__class__, self.__dict__)
-
     def __str__(self):
-        return '{}:{}'.format('Agent', self.agent_id)
+        return '{}:{}'.format('Configuration', self.config_id)
 
     @property
     def schedule(self):
