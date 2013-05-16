@@ -6,42 +6,13 @@ from requests.exceptions import HTTPError
 
 from rcbu.client.client import Connection
 from rcbu.common.constants import IDENTITY_TOKEN_URL
-
-
-MOCK_KEY = 'key'
-MOCK_ENDPOINT = 'http://tacobackup.com/v1.0/912371'
-MOCK_ENDPOINT_STRIPPED = 'http://tacobackup.com/v1.0'
+from tests.mock.auth import (
+    authenticate, MOCK_ENDPOINT_STRIPPED, MOCK_KEY
+)
 
 
 def _mock_auth(status):
-    backup_endpoint = [
-        {
-            'type': 'rax:backup',
-            'endpoints': [
-                {
-                    'publicURL': MOCK_ENDPOINT
-                }
-            ]
-        },
-        {
-            'type': 'something:else',
-            'endpoints': [
-                {
-                    'publicURL': MOCK_ENDPOINT + '/not-right'
-                }
-            ]
-        }
-    ]
-
-    reply = {
-        'access': {
-            'token': {
-                'id': MOCK_KEY
-            },
-            'serviceCatalog': backup_endpoint
-        }
-    }
-
+    reply = authenticate()
     HTTPretty.register_uri(HTTPretty.POST, IDENTITY_TOKEN_URL,
                            status=status, body=json.dumps(reply))
 
@@ -73,7 +44,6 @@ class TestValidConnection(unittest.TestCase):
 
     def test_host(self):
         self.assertEqual(self.conn.host, MOCK_ENDPOINT_STRIPPED)
-
 
     def test_version(self):
         self.assertEqual(self.conn.api_version, '1.0')
