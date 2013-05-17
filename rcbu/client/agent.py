@@ -1,7 +1,7 @@
 from rcbu.common.show import Show
 
 
-class Agent(object, Show):
+class Agent(Show):
     def __init__(self, agent_id, connection,
                  version=None, datacenter=None,
                  vault_size=None, host=None,

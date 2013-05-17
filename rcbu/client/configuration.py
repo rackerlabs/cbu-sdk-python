@@ -1,7 +1,7 @@
 from rcbu.common.show import Show
 
 
-class Configuration(object, Show):
+class Configuration(Show):
     def __init__(self, config_id):
         self.config_id = config_id
 
