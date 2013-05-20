@@ -2,6 +2,7 @@ import requests
 
 from rcbu.common.auth import authenticate
 from rcbu.common.show import Show
+import rcbu.client.backup_configuration as backup_config
 
 
 def _normalize_endpoint(url):
@@ -97,7 +98,7 @@ class Connection(Show):
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return factory.backup_config_from_response(resp.json(), self)
+        return backup_config.from_json(resp.json())
 
     def get_backup_report(self, backup_id):
         url = '{}/{}/{}/{}'.format(self.endpoint, 'backup', 'report',
