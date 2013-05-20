@@ -7,69 +7,36 @@ from rcbu.common.exceptions import InvalidObject
 
 
 class BackupConfiguration(Configuration):
-    def __init__(self, config_id, connection,
-                 agent_id=None, config_name=None, active=None,
-                 frequency=None, data_retention_days=None,
-                 inclusions=None, exclusions=None,
-                 email=None, enabled=None, next_runtime=None,
-                 last_runtime=None, last_backup_id=None,
-                 notify_on_fail=None, notify_on_success=None):
+    def __init__(self, config_id, connection):
         super(BackupConfiguration, self).__init__(config_id)
-        self.agent_id = agent_id
-        self.active = active
-        self.frequency = frequency
-        self.data_retention_days = data_retention_days
-        self.inclusions = inclusions
-        self.exclusions = exclusions
-        self.email = email
-        self.connection = connection
-        self.enabled = enabled
-        self.notify_on_fail = notify_on_fail
-        self.notify_on_success = notify_on_success
-        self.runtime = next_runtime
-        self.last_runtime = last_runtime
-        self.last_backup_id = last_backup_id
-        self.valid = True
-
-    def _valid_or_raise(self):
-        if not self.valid:
-            raise InvalidObject()
-
-    def _get_update(self):
-        return self.connection.get_backup_configuration(self.config_id)
 
     @property
     def id(self):
-        self._valid_or_raise()
         return self.config_id
 
     @property
-    def notification_email(self):
-        self._valid_or_raise()
-        return self.email
+    def agent_id(self):
+        return self.agent_id
 
-    def next_runtime(self):
-        return self._get_update().runtime
-
-    def is_enabled(self):
-        return self._get_update().enabled
-
-    def notifies_on_failure(self):
-        self._valid_or_raise()
-        return self.notify_on_fail
-
-    def notifies_on_success(self):
-        self._valid_or_raise()
-        return self.notify_on_success
-
-    def update_from_file(self, path):
+    @property
+    def notification_settings(self):
         pass
 
-    def update_from_dict(self, conf):
-        pass
+    @property
+    def name(self):
+        return '{0} ({1})'.format(self.name, self.flavor)
+
+    @property
+    def encrypted(self):
+        """Returns whether this backup is encrypted. Encryption can
+        be enabled at the agent level."""
+        return self.encrypted
+
+    @property
+    def enabled(self):
+        return self.enabled
 
     def _toggle(self, enabled=None):
-        self._valid_or_raise()
         url = '{}/{}/{}/{}'.format(self.connection.host,
                                    'backup-configuration',
                                    'enable', self.config_id)
@@ -88,11 +55,46 @@ class BackupConfiguration(Configuration):
         self._toggle(True)
         pass
 
+    @property
+    def deleted(self):
+        return self.deleted
+
     def delete(self):
-        self._valid_or_raise()
         url = '{}/{}/{}'.format(self.connection.host, 'backup-configuration',
                                 self.config_id)
         token = self.connection.token
         resp = requests.delete(url, headers={'x-auth-token': token})
         resp.raise_for_status()
         self.valid = False
+
+    @property
+    def schedule(self):
+        return '{0}:{1} {2} {3} ({4})'.format(
+            self.hour, self.minute, self.ampm, self.day_of_week,
+            self.frequency)
+
+    @property
+    def inclusions(self):
+        return self.inclusions
+
+    def set_inclusions(self, paths):
+        pass
+
+    @property
+    def exclusions(self):
+        return self.exclusions
+
+    def set_exclusions(self, paths):
+        pass
+
+    def reload(self):
+        """Captures the latest state from the API."""
+        pass
+
+    def create(self):
+        """Takes the values stored locally and creates a new configuration."""
+        pass
+
+    def update(self):
+        """Takes the local values and updates the remote config."""
+        pass

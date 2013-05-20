@@ -1,6 +1,5 @@
 import requests
 
-import rcbu.common.factory as factory
 from rcbu.common.auth import authenticate
 from rcbu.common.show import Show
 
@@ -44,7 +43,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [factory.agent_from_response(agent, self) for agent in body]
+        return [agent for agent in body]
 
     @property
     def backup_configurations(self):
@@ -53,8 +52,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [factory.backup_config_from_response(config, self)
-                for config in body]
+        return [config for config in body]
 
     @property
     def host(self):
