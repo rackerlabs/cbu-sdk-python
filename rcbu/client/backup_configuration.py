@@ -43,6 +43,13 @@ def from_json(resp):
     return BackupConfiguration(resp['BackupConfigurationId'], **args)
 
 
+def from_file(path):
+    data = None
+    with open(path, 'rt') as f:
+        data = json.load(f)
+    return from_json(data)
+
+
 def to_json(config):
     schedule = config._schedule
     start_time = schedule['start_time']
