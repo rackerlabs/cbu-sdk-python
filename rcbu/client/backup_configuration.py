@@ -40,7 +40,7 @@ def _args_from_dict(resp):
 
 def from_dict(resp):
     args = _args_from_dict(resp)
-    return BackupConfiguration(resp['BackupConfigurationId'], **args)
+    return BackupConfiguration(resp.get('BackupConfigurationId', 0), **args)
 
 
 def from_file(path):
