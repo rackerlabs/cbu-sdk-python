@@ -53,7 +53,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [config for config in body]
+        return [backup_config.from_json(config) for config in body]
 
     @property
     def host(self):

@@ -6,7 +6,8 @@ import requests
 from rcbu.client.configuration import Configuration
 
 
-def from_json(resp):
+def _args_from_json(resp):
+    """Returns a {} appropriate for constructing a BackupConfiguration."""
     args = {
         '_agent_id': resp['MachineAgentId'],
         '_name': resp['BackupConfigurationName'],
@@ -20,7 +21,7 @@ def from_json(resp):
             'start_time': {
                 'hour': resp['StartTimeHour'],
                 'minute': resp['StartTimeMinute'],
-                'am?': resp['StartTimeAmPm'].lower() == 'am'
+                'am_or_pm?': resp['StartTimeAmPm']
             },
             'time_zone': resp['TimeZoneId'],
             'hourly_interval': resp['HourInterval'],
@@ -34,7 +35,11 @@ def from_json(resp):
         '_inclusions': resp['Inclusions'],
         '_exclusions': resp['Exclusions']
     }
+    return args
 
+
+def from_json(resp):
+    args = _args_from_json(resp)
     return BackupConfiguration(resp['BackupConfigurationId'], **args)
 
 
@@ -42,6 +47,7 @@ def to_json(config):
     schedule = config._schedule
     start_time = schedule['start_time']
     notify = config._notify
+
     resp = {
         'MachineAgentId': config._agent_id,
         'BackupConfigurationName': config._name,
@@ -51,7 +57,7 @@ def to_json(config):
         'Frequency': schedule['frequency'],
         'StartTimeHour': start_time['hour'],
         'StartTimeMinute': start_time['minute'],
-        'StartTimeAmPm': 'Am' if start_time['am?'] else 'Pm',
+        'StartTimeAmPm': start_time['am_or_pm?'],
         'DayOfWeekId': schedule['day_of_week'],
         'HourInterval': schedule['hourly_interval'],
         'TimeZoneId': schedule['time_zone'],
@@ -86,9 +92,18 @@ class BackupConfiguration(Configuration):
     def notification_settings(self):
         return self._notify
 
+    def update_notification_settings(self, email, notify_on_failure=True,
+                                     notify_on_success=False):
+        self._notify['email'] = email
+        self._notify['on_failure'] = notify_on_failure
+        self._notify['on_success'] = notify_on_success
+
     @property
     def name(self):
         return self._name
+
+    def change_name(self, name):
+        self._name = name
 
     @property
     def encrypted(self):
@@ -109,23 +124,22 @@ class BackupConfiguration(Configuration):
 
     def _toggle(self, enabled=None):
         self._check_connection()
-        url = '{}/{}/{}/{}'.format(self._connection.host,
-                                   'backup-configuration',
-                                   'enable', self.config_id)
+        url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
+                                       'backup-configuration',
+                                       'enable', self.config_id)
         token = self._connection.token
         hdrs = {'x-auth-token': token, 'content-type': 'application/json'}
         msg = json.dumps({'Enable': True if enabled else False})
-        resp = requests.post(url, headers=hdrs, data=msg)
+        resp = requests.post(url, headers=hdrs, data=msg, verify=False)
         resp.raise_for_status()
         assert resp.json()['IsActive'] == enabled
+        self._enabled = enabled
 
     def disable(self):
         self._toggle(False)
-        pass
 
     def enable(self):
         self._toggle(True)
-        pass
 
     @property
     def deleted(self):
@@ -133,22 +147,27 @@ class BackupConfiguration(Configuration):
 
     def delete(self):
         self._check_connection()
-        url = '{}/{}/{}'.format(self._connection.host, 'backup-configuration',
-                                self.config_id)
+        url = '{0}/{1}/{2}'.format(self._connection.host,
+                                   'backup-configuration',
+                                   self.config_id)
         token = self._connection.token
-        resp = requests.delete(url, headers={'x-auth-token': token})
+        resp = requests.delete(url, headers={'x-auth-token': token},
+                               verify=False)
         resp.raise_for_status()
-        self.valid = False
 
     @property
     def schedule(self):
-        pass
+        return self._schedule
 
     @property
     def inclusions(self):
         return self._inclusions
 
     def set_inclusions(self, paths):
+        """Updates the inclusions for this backup configuration.
+
+        paths: a [] of paths on the local filesystem.
+        """
         self._set_paths(paths, are_exclusions=False)
 
     @property
@@ -156,6 +175,10 @@ class BackupConfiguration(Configuration):
         return self._exclusions
 
     def set_exclusions(self, paths):
+        """Updates the exclusions for this backup configuration.
+
+        paths: a [] of paths on the local filesystem.
+        """
         self._set_paths(paths, are_exclusions=True)
 
     def _set_paths(self, paths, are_exclusions=False):
@@ -170,14 +193,52 @@ class BackupConfiguration(Configuration):
     def reload(self):
         """Captures the latest state from the API."""
         self._check_connection()
-        pass
+        url = '{0}/{1}/{2}'.format(self._connection.host,
+                                   'backup-configuration',
+                                   self.id)
+        headers = {'x-auth-token': self._connection.token}
+        resp = requests.get(url, headers=headers, verify=False)
+        resp.raise_for_status
+        parsed = resp.json()
+        args = _args_from_json(parsed)
+        [setattr(self, k, v) for k, v in args.items()]
+
+    def _create_or_update(self, creating=False):
+        self._check_connection()
+        url = None
+        method = None
+
+        if creating:
+            url = '{0}/{1}'.format(self._connection.host,
+                                   'backup-configuration')
+            method = requests.post
+        else:
+            url = '{0}/{1}/{2}'.format(self._connection.host,
+                                       'backup-configuration',
+                                       self.config_id)
+            method = requests.put
+
+        data = to_json(self)
+        headers = {
+            'x-auth-token': self._connection.token,
+            'content-type': 'application/json'
+        }
+        resp = method(url, headers=headers, data=data, verify=False)
+        resp.raise_for_status()
+        print(resp, resp.content)
+        return resp.json() if creating else None
 
     def create(self):
-        """Takes the values stored locally and creates a new configuration."""
+        """Takes the values stored locally and creates a new configuration.
+
+        The configuration ID of this instance is updated to reflect the
+        new configuration that was created.
+        """
         self._check_connection()
-        pass
+        resp = self._create_or_update(creating=True)
+        self.config_id = resp['BackupConfigurationId']
 
     def update(self):
         """Takes the local values and updates the remote config."""
         self._check_connection()
-        pass
+        return self._create_or_update(creating=False)
