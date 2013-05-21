@@ -1,8 +1,8 @@
 import requests
 
-import rcbu.common.factory as factory
 from rcbu.common.auth import authenticate
 from rcbu.common.show import Show
+import rcbu.client.backup_configuration as backup_config
 
 
 def _normalize_endpoint(url):
@@ -44,7 +44,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [factory.agent_from_response(agent, self) for agent in body]
+        return [agent for agent in body]
 
     @property
     def backup_configurations(self):
@@ -53,8 +53,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [factory.backup_config_from_response(config, self)
-                for config in body]
+        return [backup_config.from_json(config) for config in body]
 
     @property
     def host(self):
@@ -99,7 +98,7 @@ class Connection(Show):
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return factory.backup_config_from_response(resp.json(), self)
+        return backup_config.from_json(resp.json())
 
     def get_backup_report(self, backup_id):
         url = '{}/{}/{}/{}'.format(self.endpoint, 'backup', 'report',
