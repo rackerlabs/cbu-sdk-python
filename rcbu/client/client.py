@@ -3,6 +3,8 @@ import requests
 from rcbu.common.auth import authenticate
 from rcbu.common.show import Show
 import rcbu.client.backup_configuration as backup_config
+import rcbu.client.backup as backup
+import rcbu.client.restore as restore
 
 
 def _normalize_endpoint(url):
@@ -67,55 +69,55 @@ class Connection(Show):
     def api_version_tuple(self):
         return tuple(int(i) for i in self.api_version.split('.'))
 
-    @property
-    def active_backups(self):
+    def _active_jobs(self, job_type='Backup'):
         url = self.endpoint + '/activity'
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return [backup for backup in resp.json()
-                if backup['Type'] == 'Backup']
+        return [b for b in resp.json()
+                if b['Type'] == job_type]
+
+    @property
+    def active_backups(self):
+        return self._active_jobs(job_type='Backup')
 
     @property
     def active_restores(self):
-        url = self.endpoint + '/activity'
-        headers = {'x-auth-token': self.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
-        return [backup for backup in resp.json()
-                if backup['Type'] == 'Restore']
+        return self._active_jobs(job_type='Restore')
 
     def get_agent(self, agent_id):
-        url = '{}/{}/{}'.format(self.endpoint, 'agent', agent_id)
+        url = '{0}/{1}/{2}'.format(self.endpoint, 'agent', agent_id)
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         return resp.json()
 
     def get_backup_configuration(self, config_id):
-        url = '{}/{}/{}'.format(self.endpoint, 'backup-configuration',
-                                config_id)
+        url = '{0}/{1}/{2}'.format(self.endpoint, 'backup-configuration',
+                                   config_id)
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         return backup_config.from_dict(resp.json())
 
     def get_backup_report(self, backup_id):
-        url = '{}/{}/{}/{}'.format(self.endpoint, 'backup', 'report',
-                                   backup_id)
+        url = '{0}/{1}/{2}/{3}'.format(self.endpoint, 'backup', 'report',
+                                       backup_id)
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         return resp.json()
 
     def create_backup(self, config):
-        backup = backup.Backup(config)
-        return backup
+        backup_action = backup.Backup(config, connection=self)
+        return backup_action
 
     def create_restore(self, backup, source_agent, destination_path,
                        destination_agent=None, overwrite=False):
+        raise NotImplementedError()
         if not destination_agent:
             destination_agent = source_agent
-        restore = restore.Restore(backup, source_agent, destination_path,
-                                  destination_agent, overwrite)
-        return restore
+        restore_action = restore.Restore(backup, source_agent,
+                                         destination_path,
+                                         destination_agent, overwrite)
+        return restore_action
