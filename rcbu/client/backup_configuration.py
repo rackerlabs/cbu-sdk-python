@@ -190,7 +190,7 @@ class BackupConfiguration(Configuration):
 
     def _set_paths(self, paths, are_exclusions=False):
         data = [
-            {"FileItemType": ("Directory" if os.path.isdir(p) else "File"),
+            {"FileItemType": ("Folder" if os.path.isdir(p) else "File"),
              "FilePath": os.path.realpath(p)} for p in paths]
         if are_exclusions:
             self._exclusions = data
