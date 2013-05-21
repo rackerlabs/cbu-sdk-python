@@ -1,6 +1,10 @@
 from rcbu.client.command import Command
 
 
+def from_dict():
+    pass
+
+
 class Backup(Command):
     def __init__(self, backup_id):
         self.backup_id = backup_id

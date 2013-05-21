@@ -6,7 +6,7 @@ import requests
 from rcbu.client.configuration import Configuration
 
 
-def _args_from_json(resp):
+def _args_from_dict(resp):
     """Returns a {} appropriate for constructing a BackupConfiguration."""
     args = {
         '_agent_id': resp['MachineAgentId'],
@@ -38,8 +38,8 @@ def _args_from_json(resp):
     return args
 
 
-def from_json(resp):
-    args = _args_from_json(resp)
+def from_dict(resp):
+    args = _args_from_dict(resp)
     return BackupConfiguration(resp['BackupConfigurationId'], **args)
 
 
@@ -47,7 +47,7 @@ def from_file(path):
     data = None
     with open(path, 'rt') as f:
         data = json.load(f)
-    return from_json(data)
+    return from_dict(data)
 
 
 def to_json(config):
@@ -207,7 +207,7 @@ class BackupConfiguration(Configuration):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status
         parsed = resp.json()
-        args = _args_from_json(parsed)
+        args = _args_from_dict(parsed)
         [setattr(self, k, v) for k, v in args.items()]
 
     def _create_or_update(self, creating=False):

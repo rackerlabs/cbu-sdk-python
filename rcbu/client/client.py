@@ -53,7 +53,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [backup_config.from_json(config) for config in body]
+        return [backup_config.from_dict(config) for config in body]
 
     @property
     def host(self):
@@ -98,7 +98,7 @@ class Connection(Show):
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return backup_config.from_json(resp.json())
+        return backup_config.from_dict(resp.json())
 
     def get_backup_report(self, backup_id):
         url = '{}/{}/{}/{}'.format(self.endpoint, 'backup', 'report',
@@ -108,8 +108,14 @@ class Connection(Show):
         resp.raise_for_status()
         return resp.json()
 
-    def create_backup(self, config_id):
-        pass
+    def create_backup(self, config):
+        backup = backup.Backup(config)
+        return backup
 
-    def create_restore(self, config_id):
-        pass
+    def create_restore(self, backup, source_agent, destination_path,
+                       destination_agent=None, overwrite=False):
+        if not destination_agent:
+            destination_agent = source_agent
+        restore = restore.Restore(backup, source_agent, destination_path,
+                                  destination_agent, overwrite)
+        return restore
