@@ -1,0 +1,30 @@
+[
+    {
+        "Day": "Sunday", 
+        "DayOfWeekID": "0"
+    }, 
+    {
+        "Day": "Monday", 
+        "DayOfWeekID": "1"
+    }, 
+    {
+        "Day": "Tuesday", 
+        "DayOfWeekID": "2"
+    }, 
+    {
+        "Day": "Wednesday", 
+        "DayOfWeekID": "3"
+    }, 
+    {
+        "Day": "Thursday", 
+        "DayOfWeekID": "4"
+    }, 
+    {
+        "Day": "Friday", 
+        "DayOfWeekID": "5"
+    }, 
+    {
+        "Day": "Saturday", 
+        "DayOfWeekID": "6"
+    }
+]

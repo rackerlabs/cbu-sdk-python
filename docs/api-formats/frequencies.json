@@ -1,0 +1,22 @@
+[
+    {
+        "Frequency": "Hourly", 
+        "ID": 5
+    }, 
+    {
+        "Frequency": "Daily", 
+        "ID": 3
+    }, 
+    {
+        "Frequency": "Weekly", 
+        "ID": 2
+    }, 
+    {
+        "Frequency": "Monthly", 
+        "ID": 1
+    }, 
+    {
+        "Frequency": "Manually", 
+        "ID": 6
+    }
+]

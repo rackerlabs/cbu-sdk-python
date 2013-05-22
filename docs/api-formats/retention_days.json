@@ -1,0 +1,14 @@
+[
+    {
+        "NumVersionRetenDays": "60", 
+        "Text": "for at least 60 days"
+    }, 
+    {
+        "NumVersionRetenDays": "30", 
+        "Text": "for at least 30 days"
+    }, 
+    {
+        "NumVersionRetenDays": "0", 
+        "Text": "indefinitely"
+    }
+]
