@@ -38,16 +38,18 @@ def _args_from_dict(resp):
     return args
 
 
-def from_dict(resp):
+def from_dict(resp, connection=None):
     args = _args_from_dict(resp)
-    return BackupConfiguration(resp.get('BackupConfigurationId', 0), **args)
+    return BackupConfiguration(resp.get('BackupConfigurationId', 0),
+                               connection,
+                               **args)
 
 
-def from_file(path):
+def from_file(path, connection=None):
     data = None
     with open(path, 'rt') as f:
         data = json.load(f)
-    return from_dict(data)
+    return from_dict(data, connection)
 
 
 def to_json(config):
@@ -82,10 +84,10 @@ class DisconnectedError(Exception):
 
 
 class BackupConfiguration(Configuration):
-    def __init__(self, config_id, **kwargs):
+    def __init__(self, config_id, connection=None, **kwargs):
         super(BackupConfiguration, self).__init__(config_id)
         [setattr(self, k, v) for k, v in kwargs.items()]
-        self._connection = None
+        self._connection = connection
 
     @property
     def id(self):

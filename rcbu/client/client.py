@@ -57,7 +57,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [backup_config.from_dict(config) for config in body]
+        return [backup_config.from_dict(config, self) for config in body]
 
     @property
     def host(self):
