@@ -86,7 +86,7 @@ class Agent(Show):
         headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return [j for j in resp.json() if predicate()]
+        return [j for j in resp.json() if predicate(j)]
 
     @property
     def active_backups(self):
@@ -98,7 +98,7 @@ class Agent(Show):
 
     @property
     def busy(self):
-        return len(self._active_jobs(lambda: True)) > 0
+        return len(self._active_jobs(lambda j: True)) > 0
 
     @property
     def encrypted(self):

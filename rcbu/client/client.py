@@ -3,6 +3,7 @@ import requests
 from rcbu.common.auth import authenticate
 from rcbu.common.show import Show
 import rcbu.client.backup_configuration as backup_config
+import rcbu.client.agent as agent
 import rcbu.client.backup as backup
 import rcbu.client.restore as restore
 
@@ -46,7 +47,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [agent for agent in body]
+        return [agent.from_dict(a) for a in body]
 
     @property
     def backup_configurations(self):
@@ -69,28 +70,27 @@ class Connection(Show):
     def api_version_tuple(self):
         return tuple(int(i) for i in self.api_version.split('.'))
 
-    def _active_jobs(self, job_type='Backup'):
+    def _active_jobs(self, predicate):
         url = self.endpoint + '/activity'
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return [b for b in resp.json()
-                if b['Type'] == job_type]
+        return [b for b in resp.json() if predicate(b)]
 
     @property
     def active_backups(self):
-        return self._active_jobs(job_type='Backup')
+        return self._active_jobs(lambda job: job['Type'] == 'Backup')
 
     @property
     def active_restores(self):
-        return self._active_jobs(job_type='Restore')
+        return self._active_jobs(lambda job: job['Type'] == 'Restore')
 
     def get_agent(self, agent_id):
         url = '{0}/{1}/{2}'.format(self.endpoint, 'agent', agent_id)
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return resp.json()
+        return agent.from_dict(resp.json())
 
     def get_backup_configuration(self, config_id):
         url = '{0}/{1}/{2}'.format(self.endpoint, 'backup-configuration',
