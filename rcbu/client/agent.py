@@ -70,8 +70,9 @@ class Agent(Show):
 
     @property
     def backup_configurations(self):
-        url = '{}/{}/{}/{}'.format(self._connection.host,
-                                   'backup-configuration', 'system', self.id)
+        url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
+                                       'backup-configuration', 'system',
+                                       self.id)
         headers = {'x-auth-token': self._connection.host}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
@@ -110,8 +111,9 @@ class Agent(Show):
         return self._enabled
 
     def _toggle(self, enabled=True):
-        url = '{}/{}/{}'.format(self._connection.host, 'agent', 'enable')
-        headers = {'x-auth-token': self._connection.token}
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'enable')
+        headers = {'x-auth-token': self._connection.token,
+                   'content-type': 'application/json'}
         data = json.dumps({
             'MachineAgentId': self.id,
             'Enable': enabled
@@ -128,4 +130,9 @@ class Agent(Show):
         self._toggle(enabled=False)
 
     def delete(self):
-        pass
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'delete')
+        headers = {'x-auth-token': self._connection.token,
+                   'content-type': 'application/json'}
+        data = json.dumps({'MachineAgentId': self.id})
+        resp = requests.post(url, headers=headers, data=data, verify=False)
+        resp.raise_for_status()
