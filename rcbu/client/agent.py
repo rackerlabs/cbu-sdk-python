@@ -1,63 +1,131 @@
+import json
+
+import requests
+
 from rcbu.common.show import Show
+import rcbu.client.backup_configuration as backup_config
+
+
+def _args_from_dict(body):
+    args = {
+        '_version': body['AgentVersion'],
+        '_vault_size': body['BackupVaultSize'],
+        '_allow_cleanups': body['CleanupsAllowed'],
+        '_data_center': body['DataCenter'],
+        '_ipv4': body['IPAddress'],
+        '_machine_name': body['MachineName'],
+        '_os': {
+            'type': body['OperatingSystem'],
+            'version': body['OperatingSystemVersion']
+        },
+        '_encrypted': body['IsEncrypted'],
+        '_enabled': not body['IsDisabled']
+    }
+    return args
+
+
+def from_dict(body, connection=None):
+    args = _args_from_dict(body)
+    return Agent(args.get('MachineAgentId', 0), connection, args)
+
+
+def from_file(path, connection=None):
+    data = None
+    with open(path, 'rt') as f:
+        data = json.load(f)
+    return from_dict(data, connection)
 
 
 class Agent(Show):
-    def __init__(self, agent_id, connection,
-                 version=None, datacenter=None,
-                 vault_size=None, host=None,
-                 enabled=None, encrypted=None, os=None,
-                 machine_name=None):
+    def __init__(self, agent_id, connection=None, **kwargs):
         self.agent_id = agent_id
-        self.version = version
-        self.datacenter = datacenter
-        self.vault_size = vault_size
-        self.host = host
-        self.enabled = enabled
-        self.encrypted = encrypted
-        self.os = os
-        self.machine_name = machine_name
-        self.connection = connection
+        self._connection = connection
+        [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __str__(self):
         return '{}:{}'.format('Agent', self.agent_id)
 
+    def connect(self, connection):
+        self._connection = connection
+
+    @property
+    def id(self):
+        return self.agent_id
+
+    @property
+    def version(self):
+        return self._version
+
     @property
     def name(self):
-        return self.machine_name
+        return self._machine_name
+
+    @property
+    def os(self):
+        return '{0} {1}'.format(self._os['type'], self._os['version'])
+
+    @property
+    def data_center(self):
+        return self._data_center
 
     @property
     def backup_configurations(self):
-        pass
+        url = '{}/{}/{}/{}'.format(self._connection.host,
+                                   'backup-configuration', 'system', self.id)
+        headers = {'x-auth-token': self._connection.host}
+        resp = requests.get(url, headers=headers, verify=False)
+        resp.raise_for_status()
+        return [backup_config.from_dict(b) for b in resp.json()]
 
-    @property
-    def restore_configurations(self):
-        pass
+    def _active_jobs(self, predicate):
+        url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
+                                       'system', 'activity',
+                                       self.id)
+        headers = {'x-auth-token': self._connection.token}
+        resp = requests.get(url, headers=headers, verify=False)
+        resp.raise_for_status()
+        return [j for j in resp.json() if predicate()]
 
     @property
     def active_backups(self):
-        pass
+        return self._active_jobs(lambda job: job['Type'] == 'Backup')
 
     @property
     def active_restores(self):
-        pass
+        return self._active_jobs(lambda job: job['Type'] == 'Backup')
 
-    def is_busy(self):
-        pass
+    @property
+    def busy(self):
+        return len(self._active_jobs(lambda: True)) > 0
 
-    def is_encrypted(self):
-        pass
-
-    def is_enabled(self):
-        pass
-
-    def enable(self):
-        pass
-
-    def disable(self):
-        pass
-
-    def delete(self):
-        pass
+    @property
+    def encrypted(self):
+        return self._encrypted
 
     def encrypt(self):
+        raise NotImplementedError()
+
+    @property
+    def enabled(self):
+        return self._enabled
+
+    def _toggle(self, enabled=True):
+        url = '{}/{}/{}'.format(self._connection.host, 'agent', 'enable')
+        headers = {'x-auth-token': self._connection.token}
+        data = json.dumps({
+            'MachineAgentId': self.id,
+            'Enable': enabled
+        })
+        resp = requests.post(url, headers=headers, data=data, verify=False)
+        resp.raise_for_status()
+        print(resp.content)
+        self._enabled = enabled
+
+    def enable(self):
+        self._toggle(enabled=True)
+
+    def disable(self):
+        self._toggle(enabled=False)
+
+    def delete(self):
         pass
