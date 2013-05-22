@@ -232,7 +232,6 @@ class BackupConfiguration(Configuration):
         }
         resp = method(url, headers=headers, data=data, verify=False)
         resp.raise_for_status()
-        print(resp, resp.content)
         return resp.json() if creating else None
 
     def create(self):

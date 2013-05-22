@@ -147,7 +147,6 @@ class Agent(Show):
         })
         resp = requests.post(url, headers=headers, data=data, verify=False)
         resp.raise_for_status()
-        print(resp.content)
         self._enabled = enabled
 
     def enable(self):

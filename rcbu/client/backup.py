@@ -93,14 +93,11 @@ class Backup(Command):
                                        'backup', 'report', self.id)
         headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers, verify=False)
-        print(url, self._connection)
         resp.raise_for_status()
-        print(resp.json())
         return backup_report.from_dict(resp.json())
 
     def _is_done(self):
         report = self.report
-        print(report._state)
         return report._state in ['Completed', 'CompletedWithErrors',
                                  'Failed', 'Stopped', 'Skipped', 'Missed']
 
