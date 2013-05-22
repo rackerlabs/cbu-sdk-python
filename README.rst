@@ -1,12 +1,12 @@
-***********************
-Cloud Backup API Python
-***********************
+***************************
+Cloud Backup API Python SDK
+***************************
 
 :version: 0.5.0
 
-Welcome to the Python bindings to Rackspace Cloud Backup API. These
-bindings will help you make the most of the Cloud Backup system and
-integrate it into your workflows.
+Welcome to the Python bindings to the Rackspace Cloud Backup
+API. These bindings will help you make the most of the Cloud Backup
+system and integrate it into your workflows.
 
 **Table of Contents**
 
@@ -23,6 +23,34 @@ Features
 * Easy to install (pip)
 * Easy to test (nose + tox)
 * Easy to use
+
+I'll let the code speak for ease of use:
+
+.. code-block:: python
+
+    from rcbu.client.client import Connection
+    import rcbu.client.backup_configuration as backup_config
+
+    conn = Connection('username', apikey='981263y1hq82yh8y9q38q2')
+    myconf = backup_config.from_file('backup_config.json')
+    myconf.connect(conn)
+
+    # Upload a new backup configuration to the Backup API
+    myconf.create()
+
+    backup = conn.create_backup(myconf)
+    status = backup.start()
+
+    # block here until the backup completes
+    # polls once a minute by default
+    backup.wait_for_completion(poll_interval_seconds=60)
+
+    # easy reporting and checking for success
+    report = backup.report
+    report.raise_if_not_ok()
+
+
+Check out the `backup_config.json`_
 
 =======
 Install
@@ -48,3 +76,4 @@ If you have any questions, please check in with Alejandro Cabrera
 <alejandro.cabrera@rackspace.com>.
 
 .. _Pythonic: http://www.python.org/dev/peps/pep-0020/
+.. _backup_config.json: https://github.com/racker/python-cloudbackup-client/blob/master/examples/create_a_backup/backup_config.json
