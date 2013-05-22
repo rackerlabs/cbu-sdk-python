@@ -3,6 +3,7 @@ import json
 import requests
 
 from rcbu.common.show import Show
+from rcbu.common.constants import ENCRYPT_KEY_URL
 import rcbu.client.backup_configuration as backup_config
 
 
@@ -103,8 +104,21 @@ class Agent(Show):
     def encrypted(self):
         return self._encrypted
 
-    def encrypt(self):
-        raise NotImplementedError()
+    def encrypt(self, encrypted_key_hex):
+        if not len(encrypted_key_hex) == 512:
+            raise ValueError("key should be 512 bytes long: see"
+                             "{} for more details".format(ENCRYPT_KEY_URL))
+
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'encrypt')
+        headers = {'x-auth-token': self._connection.token,
+                   'content-type': 'application/json'}
+        data = json.dumps({
+            'MachineAgentId': self.id,
+            'EncryptedPasswordHex': encrypted_key_hex
+        })
+        resp = requests.post(url, headers=headers, data=data, verify=False)
+        resp.raise_for_status()
+        self._encrypted = True
 
     @property
     def enabled(self):
