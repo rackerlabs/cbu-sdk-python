@@ -11,8 +11,8 @@ def _args_from_dict(body):
     args = {
         '_version': body['AgentVersion'],
         '_vault_size': body['BackupVaultSize'],
-        '_allow_cleanups': body['CleanupsAllowed'],
-        '_data_center': body['DataCenter'],
+        '_allow_cleanups': body['CleanupAllowed'],
+        '_data_center': body['Datacenter'],
         '_ipv4': body['IPAddress'],
         '_machine_name': body['MachineName'],
         '_os': {
@@ -27,7 +27,7 @@ def _args_from_dict(body):
 
 def from_dict(body, connection=None):
     args = _args_from_dict(body)
-    return Agent(args.get('MachineAgentId', 0), connection, args)
+    return Agent(body.get('MachineAgentId', 0), connection, **args)
 
 
 def from_file(path, connection=None):
@@ -74,7 +74,7 @@ class Agent(Show):
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        'backup-configuration', 'system',
                                        self.id)
-        headers = {'x-auth-token': self._connection.host}
+        headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         return [backup_config.from_dict(b) for b in resp.json()]
@@ -94,11 +94,11 @@ class Agent(Show):
 
     @property
     def active_restores(self):
-        return self._active_jobs(lambda job: job['Type'] == 'Backup')
+        return self._active_jobs(lambda job: job['Type'] == 'Restores')
 
     @property
     def busy(self):
-        return len(self._active_jobs(lambda j: True)) > 0
+        return len(self._active_jobs(lambda job: job['Type'])) > 0
 
     @property
     def encrypted(self):
@@ -106,7 +106,7 @@ class Agent(Show):
 
     def encrypt(self, encrypted_key_hex):
         if not len(encrypted_key_hex) == 512:
-            raise ValueError("key should be 512 bytes long: see"
+            raise ValueError("key should be 512 bytes long: see "
                              "{} for more details".format(ENCRYPT_KEY_URL))
 
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'encrypt')
