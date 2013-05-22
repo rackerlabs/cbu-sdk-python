@@ -4,6 +4,7 @@ import requests
 
 from rcbu.common.show import Show
 from rcbu.common.constants import ENCRYPT_KEY_URL
+from rcbu.common.jobs import is_running
 import rcbu.client.backup_configuration as backup_config
 
 
@@ -79,7 +80,7 @@ class Agent(Show):
         resp.raise_for_status()
         return [backup_config.from_dict(b) for b in resp.json()]
 
-    def _active_jobs(self, predicate):
+    def _jobs(self, predicate):
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        'system', 'activity',
                                        self.id)
@@ -88,17 +89,27 @@ class Agent(Show):
         resp.raise_for_status()
         return [j for j in resp.json() if predicate(j)]
 
+    @property backup_history(self):
+        return self._jobs(lambda job: job['Type'] == 'Backup' and
+                          not is_running(job))
+
+    @property restore_history(self):
+        return self._jobs(lambda job: job['Type'] == 'Restore' and
+                          not is_running(job))
+
     @property
     def active_backups(self):
-        return self._active_jobs(lambda job: job['Type'] == 'Backup')
+        return self._jobs(lambda job: job['Type'] == 'Backup' and
+                          is_running(job))
 
     @property
     def active_restores(self):
-        return self._active_jobs(lambda job: job['Type'] == 'Restores')
+        return self._jobs(lambda job: job['Type'] == 'Restore' and
+                          is_running(job))
 
     @property
     def busy(self):
-        return len(self._active_jobs(lambda job: job['Type'])) > 0
+        return len(self._jobs(lambda job: is_running(job))) > 0
 
     @property
     def encrypted(self):
