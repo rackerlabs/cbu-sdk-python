@@ -1,26 +1,27 @@
 {
-  "MachineAgentId": 176345,
-  "MachineName": "agent-test-ubuntu-1304-prototype",
-  "BackupConfigurationName": "pysdk",
-  "IsActive": true,
-  "IsDeleted": false,
-  "IsEncrypted": false,
-  "VersionRetention": 30,
-  "MissedBackupActionId": 2,
-  "Frequency": "Manually", 
-  "StartTimeHour": null,
-  "StartTimeMinute": null,
-  "StartTimeAmPm": null,
-  "DayOfWeekId": null,
-  "HourInterval": null,
-  "TimeZoneId": "UTC",
-  "NotifyRecipients": "cpp.cabrera@gmail.com",
-  "NotifySuccess": false,
-  "NotifyFailure": true,
-  "Inclusions": [{
-    "FilePath": "/root",
-    "FileItemType": "Folder"
-  }],
-  "Exclusions": []
+    "BackupConfigurationName": "pysdk",
+    "DayOfWeekId": null,
+    "Exclusions": [],
+    "Frequency": "Manually",
+    "HourInterval": null,
+    "Inclusions": [
+        {
+            "FileItemType": "Folder",
+            "FilePath": "/root"
+        }
+    ],
+    "IsActive": true,
+    "IsDeleted": false,
+    "IsEncrypted": false,
+    "MachineAgentId": 176345,
+    "MachineName": "agent-test-ubuntu-1304-prototype",
+    "MissedBackupActionId": 2,
+    "NotifyFailure": true,
+    "NotifyRecipients": "cpp.cabrera@gmail.com",
+    "NotifySuccess": false,
+    "StartTimeAmPm": null,
+    "StartTimeHour": null,
+    "StartTimeMinute": null,
+    "TimeZoneId": "UTC",
+    "VersionRetention": 30
 }
-
