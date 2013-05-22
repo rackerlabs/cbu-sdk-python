@@ -89,11 +89,13 @@ class Agent(Show):
         resp.raise_for_status()
         return [j for j in resp.json() if predicate(j)]
 
-    @property backup_history(self):
+    @property
+    def backup_history(self):
         return self._jobs(lambda job: job['Type'] == 'Backup' and
                           not is_running(job))
 
-    @property restore_history(self):
+    @property
+    def restore_history(self):
         return self._jobs(lambda job: job['Type'] == 'Restore' and
                           not is_running(job))
 

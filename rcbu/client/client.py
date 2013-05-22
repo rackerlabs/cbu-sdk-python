@@ -81,22 +81,22 @@ class Connection(Show):
     @property
     def backup_history(self):
         return self._jobs(lambda job: job['Type'] == 'Backup' and
-                          not is_running(job)
+                          not is_running(job))
 
     @property
     def restore_history(self):
         return self._jobs(lambda job: job['Type'] == 'Restore' and
-                          not is_running(job)
+                          not is_running(job))
 
     @property
     def active_backups(self):
         return self._jobs(lambda job: job['Type'] == 'Backup' and
-                          is_running(job)
+                          is_running(job))
 
     @property
     def active_restores(self):
         return self._jobs(lambda job: job['Type'] == 'Restore' and
-                          is_running(job)
+                          is_running(job))
 
     def get_agent(self, agent_id):
         url = '{0}/{1}/{2}'.format(self.endpoint, 'agent', agent_id)
