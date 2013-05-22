@@ -47,7 +47,7 @@ class Connection(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         body = resp.json()
-        return [agent.from_dict(a) for a in body]
+        return [agent.from_dict(a, connection=self) for a in body]
 
     @property
     def backup_configurations(self):
@@ -90,7 +90,7 @@ class Connection(Show):
         headers = {'x-auth-token': self.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return agent.from_dict(resp.json())
+        return agent.from_dict(resp.json(), connection=self)
 
     def get_backup_configuration(self, config_id):
         url = '{0}/{1}/{2}'.format(self.endpoint, 'backup-configuration',
