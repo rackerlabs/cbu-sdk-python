@@ -4,4 +4,4 @@ DONE_STATUS = ('Completed', 'CompletedWithErrors', 'Stopped',
 
 
 def is_running(job):
-    return job['Status'] in BUSY_STATUS
+    return job['CurrentState'] in BUSY_STATUS
