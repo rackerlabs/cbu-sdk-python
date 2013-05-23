@@ -101,6 +101,11 @@ class Backup(Command):
         return report._state in ['Completed', 'CompletedWithErrors',
                                  'Failed', 'Stopped', 'Skipped', 'Missed']
 
-    def wait_for_completion(self, poll_interval_seconds=60):
+    def wait_for_completion(self, poll_interval=60, timeout=None):
+        time_waited = 0
         while not self._is_done():
-            time.sleep(poll_interval_seconds)
+            start = time.time()
+            time.sleep(poll_interval)
+            time_waited += time.time() - start
+            if timeout and time_waited > timeout:
+                raise RuntimeError('Backup took too long.')
