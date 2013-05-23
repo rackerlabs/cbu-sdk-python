@@ -6,7 +6,7 @@ import rcbu.client.backup_configuration as backup_config
 
 
 if len(sys.argv) != 3:
-    print('usage: {} username password'.format(sys.argv[0]))
+    print('usage: {0} username password'.format(sys.argv[0]))
     quit()
 
 username = sys.argv[1]

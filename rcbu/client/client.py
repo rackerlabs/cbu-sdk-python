@@ -39,7 +39,7 @@ class Connection(Show):
         self.endpoint = _find_backup_endpoint(endpoints)
 
     def __str__(self):
-        return '{}:{}'.format('RCBU Connection', self.endpoint)
+        return '{0}:{1}'.format('RCBU Connection', self.endpoint)
 
     @property
     def agents(self):

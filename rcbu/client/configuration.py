@@ -6,7 +6,7 @@ class Configuration(Show):
         self.config_id = config_id
 
     def __str__(self):
-        return '{}:{}'.format('Configuration', self.config_id)
+        return '{0}:{1}'.format('Configuration', self.config_id)
 
     @property
     def id(self):

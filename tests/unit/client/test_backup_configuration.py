@@ -17,7 +17,7 @@ def _mock_auth(status):
 
 def _mock_config(status, endpoint, config_id):
     reply = backup_configuration()
-    url = '{}/{}/{}'.format(endpoint, 'backup-configuration', config_id)
+    url = '{0}/{1}/{2}'.format(endpoint, 'backup-configuration', config_id)
     HTTPretty.register_uri(HTTPretty.GET, url, json.dumps(reply))
 
 

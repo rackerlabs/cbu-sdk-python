@@ -45,7 +45,7 @@ class Agent(Show):
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __str__(self):
-        return '{}:{}'.format('Agent', self.agent_id)
+        return '{0}:{1}'.format('Agent', self.agent_id)
 
     def connect(self, connection):
         self._connection = connection
