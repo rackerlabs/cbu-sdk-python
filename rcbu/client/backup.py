@@ -5,6 +5,7 @@ import requests
 
 from rcbu.client.command import Command
 import rcbu.client.backup_report as backup_report
+from rcbu.common.jobs import DONE_STATUS
 
 
 def _args_from_dict(body):
@@ -102,9 +103,7 @@ class Backup(Command):
 
     def _is_done(self):
         state = self._fetch_state(reload=True)
-        return state in ['Completed', 'CompletedWithErrors',
-                         'Failed', 'Stopped',
-                         'Skipped', 'Missed']
+        return state in DONE_STATUS
 
     def wait_for_completion(self, poll_interval=60, timeout=None):
         time_waited = 0
