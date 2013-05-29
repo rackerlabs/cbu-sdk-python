@@ -54,6 +54,11 @@ class Backup(Command):
     def running(self):
         return self._state in ['Queued', 'Preparing', 'InProgress']
 
+    def _fetch_state(self, reload=False):
+        if reload:
+            self._state = Status(self.id, self._connection).state
+        return self._state
+
     @property
     def state(self):
         return self._state
@@ -81,7 +86,6 @@ class Backup(Command):
     def start(self):
         resp = self._action(starting=True)
         self._backup_id = int(resp.content)
-        time.sleep(15)
         return Status(self._backup_id, self._connection)
 
     def stop(self):
@@ -97,9 +101,10 @@ class Backup(Command):
         return backup_report.from_dict(resp.json())
 
     def _is_done(self):
-        report = self.report
-        return report._state in ['Completed', 'CompletedWithErrors',
-                                 'Failed', 'Stopped', 'Skipped', 'Missed']
+        state = self._fetch_state(reload=True)
+        return state in ['Completed', 'CompletedWithErrors',
+                         'Failed', 'Stopped',
+                         'Skipped', 'Missed']
 
     def wait_for_completion(self, poll_interval=60, timeout=None):
         time_waited = 0
