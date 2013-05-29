@@ -46,7 +46,7 @@ I'll let the code speak for ease of use:
 
     # block here until the backup completes
     # polls once a minute by default
-    backup.wait_for_completion(poll_interval_seconds=60)
+    backup.wait_for_completion(poll_interval=.5)
 
     # easy reporting and checking for success
     report = backup.report
