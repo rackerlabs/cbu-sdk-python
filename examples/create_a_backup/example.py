@@ -25,14 +25,15 @@ print('Created!')
 print('Starting a backup...')
 backup = conn.create_backup(myconf)
 status = backup.start()
-print('Started!')
+print('Started! (id: {0})'.format(backup.id))
 
 print('Waiting for it to finish...')
 time.sleep(15)
-backup.wait_for_completion(poll_interval_seconds=5)
+backup.wait_for_completion(poll_interval=30)
 print('Done!')
 
 print('...and the result is...')
 report = backup.report
+print(report._time)
 report.raise_if_not_ok()
 print('OK!')

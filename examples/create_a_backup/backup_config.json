@@ -7,7 +7,7 @@
     "Inclusions": [
         {
             "FileItemType": "Folder",
-            "FilePath": "/root"
+            "FilePath": "/root/many_small2"
         }
     ],
     "IsActive": true,
