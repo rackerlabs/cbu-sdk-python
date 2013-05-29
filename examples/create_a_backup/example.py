@@ -27,7 +27,7 @@ status = backup.start()
 print('Started! (id: {0})'.format(backup.id))
 
 print('Waiting for it to finish...')
-backup.wait_for_completion(poll_interval=5)
+backup.wait_for_completion(poll_interval=0.5)
 print('Done!')
 
 print('...and the result is...')
