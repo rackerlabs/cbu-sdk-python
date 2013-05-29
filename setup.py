@@ -5,6 +5,7 @@ from setuptools import setup, find_packages
 pip_requires = os.path.join(os.getcwd(), 'tools', 'pip-requires')
 test_requires = os.path.join(os.getcwd(), 'tools', 'test-requires')
 
+
 def file_lines(path):
     reqs = None
     with open(path, 'rt') as f:

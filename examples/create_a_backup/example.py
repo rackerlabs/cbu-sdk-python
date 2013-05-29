@@ -1,5 +1,4 @@
 import sys
-import time
 
 from rcbu.client.client import Connection
 import rcbu.client.backup_configuration as backup_config
@@ -28,12 +27,12 @@ status = backup.start()
 print('Started! (id: {0})'.format(backup.id))
 
 print('Waiting for it to finish...')
-time.sleep(15)
-backup.wait_for_completion(poll_interval=30)
+backup.wait_for_completion(poll_interval=0.5)
 print('Done!')
 
 print('...and the result is...')
 report = backup.report
-print(report._time)
 report.raise_if_not_ok()
 print('OK!')
+
+print('The backup took: {0}'.format(report._time['duration']))
