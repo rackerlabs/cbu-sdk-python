@@ -10,14 +10,13 @@ _int_to_status = {
     8: 'CompletedWithErrors',
     9: 'Preparing'
 }
+
 BUSY_STATUS = ('StartRequested', 'Creating', 'InProgress',
                'StopRequested', 'Queued', 'Preparing')
 DONE_STATUS = ('Completed', 'CompletedWithErrors', 'Stopped',
                'Skipped', 'Failed', 'Missed')
 
-
-def int_to_status(n):
-    return _int_to_status[n]
+int_to_status = lambda n: _int_to_status[n]
 
 
 def busy(status):
