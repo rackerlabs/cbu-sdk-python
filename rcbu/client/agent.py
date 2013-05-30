@@ -4,8 +4,8 @@ import requests
 
 from rcbu.common.show import Show
 from rcbu.common.constants import ENCRYPT_KEY_URL
+from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
-import rcbu.common.jobs as jobs
 
 
 def _args_from_dict(body):
@@ -38,10 +38,14 @@ def from_file(path, connection=None):
     return from_dict(data, connection)
 
 
-class Agent(Show):
+class Agent(Show, ExposesActivities):
     def __init__(self, agent_id, connection=None, **kwargs):
         self.agent_id = agent_id
         self._connection = connection
+        ExposesActivities.__init__(self,
+                                   self._connection.endpoint,
+                                   self._connection.token,
+                                   agent_id)
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __str__(self):
@@ -79,31 +83,6 @@ class Agent(Show):
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         return [backup_config.from_dict(b) for b in resp.json()]
-
-    @property
-    def backup_history(self):
-        return jobs.backup_history(self._connection.host,
-                                   self._connection.key, self.id)
-
-    @property
-    def restore_history(self):
-        return jobs.restore_history(self._connection.host,
-                                    self._connection.key, self.id)
-
-    @property
-    def active_backups(self):
-        return jobs.active_backups(self._connection.host,
-                                   self._connection.key, self.id)
-
-    @property
-    def active_restores(self):
-        return jobs.active_restores(self._connection.host,
-                                    self._connection.key, self.id)
-
-    @property
-    def busy(self):
-        return jobs.any_running(self._connection.host,
-                                self._connection.key, self.id)
 
     @property
     def encrypted(self):
