@@ -119,7 +119,8 @@ class Connection(Show):
     def create_restore(self, backup_id, source_agent, destination_path,
                        destination_agent=None, overwrite=False):
         url = '{0}/{1}'.format(self.endpoint, 'restore')
-        headers = {'x-auth-token': self.token}
+        headers = {'x-auth-token': self.token,
+                   'content-type': 'application/json'}
         data = json.dumps({
             'BackupId': backup_id,
             'BackupMachineId': source_agent.id,
