@@ -4,7 +4,7 @@ import time
 import requests
 
 from rcbu.client.command import Command
-import rcbu.common.jobs as jobs
+import rcbu.common.status as status
 from rcbu.utils.perf import Timer
 import rcbu.client.restore_report as restore_report
 from rcbu.common.status import int_to_status
@@ -69,7 +69,7 @@ class Restore(Command):
 
     @property
     def running(self):
-        return self._state in jobs.BUSY_STATUS
+        return self._state in status.BUSY_STATUS
 
     def _fetch_state(self, reload=False):
         if reload:
@@ -120,7 +120,7 @@ class Restore(Command):
 
     def _is_done(self):
         state = self._fetch_state(reload=True)
-        return state in jobs.DONE_STATUS
+        return state in status.DONE_STATUS
 
     def wait_for_completion(self, poll_interval=60, timeout=None):
         time_waited = 0
