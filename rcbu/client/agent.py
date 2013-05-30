@@ -103,7 +103,8 @@ class Agent(Show):
 
     @property
     def busy(self):
-        return len(self._jobs(lambda job: is_running(job))) > 0
+        return jobs.any_running(self._connection.host,
+                                self._connection.key, self.id)
 
     @property
     def encrypted(self):

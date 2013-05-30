@@ -9,7 +9,8 @@ _predicates = {
     "backup_history": lambda j: j['Type'] == 'Backup' and not is_running(j),
     "restore_history": lambda j: j['Type'] == 'Restore' and not is_running(j),
     "active_backups": lambda j: j['Type'] == 'Backup' and is_running(j),
-    "active_restores": lambda j: j['Type'] == 'Restore' and is_running(j)
+    "active_restores": lambda j: j['Type'] == 'Restore' and is_running(j),
+    "active": lambda j: is_running(j)
 }
 
 
@@ -24,6 +25,10 @@ def jobs(host, key, predicate, agent_id=None):
     resp = requests.get(url, headers=headers, verify=False)
     resp.raise_for_status()
     return [b for b in resp.json() if predicate(b)]
+
+
+def any_running(host, key, agent_id=None):
+    return len(jobs(host, key, _predicates['active'], agent_id)) > 0
 
 
 def backup_history(host, key, agent_id=None):
