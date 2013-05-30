@@ -4,7 +4,6 @@ import requests
 
 from rcbu.common.show import Show
 from rcbu.common.constants import ENCRYPT_KEY_URL
-from rcbu.common.jobs import is_running
 import rcbu.client.backup_configuration as backup_config
 import rcbu.common.jobs as jobs
 
