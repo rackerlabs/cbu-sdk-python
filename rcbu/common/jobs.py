@@ -19,8 +19,8 @@ def is_running(job):
 
 
 def jobs(host, key, predicate, agent_id=None):
-    url = ('{}/{}'.format(host, 'activity') if not agent_id else
-           '{}/{}/{}/{}'.format(host, 'system', 'activity', agent_id))
+    url = ('{0}/{1}'.format(host, 'activity') if not agent_id else
+           '{0}/{1}/{2}/{3}'.format(host, 'system', 'activity', agent_id))
     headers = {'x-auth-token': key}
     resp = requests.get(url, headers=headers, verify=False)
     resp.raise_for_status()
