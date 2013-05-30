@@ -1,23 +1,7 @@
 import requests
 
+import rcbu.common.status as status
 
-_int_to_status = {
-    0: 'Creating',
-    1: 'Queued',
-    2: 'InProgress',
-    3: 'Completed',
-    4: 'Stopped',
-    5: 'Failed',
-    6: 'StartRequested',
-    7: 'StopRequested',
-    8: 'CompletedWithErrors',
-    9: 'Preparing'
-}
-
-BUSY_STATUS = ('StartRequested', 'Creating', 'InProgress',
-               'StopRequested', 'Queued', 'Preparing')
-DONE_STATUS = ('Completed', 'CompletedWithErrors', 'Stopped',
-               'Skipped', 'Failed', 'Missed')
 
 _predicates = {
     "backup_history": lambda j: j['Type'] == 'Backup' and not is_running(j),
@@ -29,7 +13,7 @@ _predicates = {
 
 
 def is_running(job):
-    return job['CurrentState'] in BUSY_STATUS
+    return status.busy(job['CurrentState'])
 
 
 def jobs(host, key, predicate, agent_id=None):

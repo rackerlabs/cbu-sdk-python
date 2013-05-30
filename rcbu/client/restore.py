@@ -7,6 +7,7 @@ from rcbu.client.command import Command
 import rcbu.common.jobs as jobs
 from rcbu.utils.perf import Timer
 import rcbu.client.restore_report as restore_report
+from rcbu.common.status import int_to_status
 
 
 def _args_from_dict(body):
@@ -57,7 +58,7 @@ class Status(object):
         headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers)
         resp.raise_for_status()
-        return jobs._int_to_status[resp.json()['RestoreStateId']]
+        return int_to_status[resp.json()['RestoreStateId']]
 
 
 class Restore(Command):
