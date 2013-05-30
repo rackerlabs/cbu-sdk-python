@@ -5,7 +5,7 @@ import requests
 
 from rcbu.client.command import Command
 import rcbu.client.backup_report as backup_report
-import rcbu.common.jobs as jobs
+import rcbu.common.status as status
 from rcbu.utils.perf import Timer
 
 
@@ -54,7 +54,7 @@ class Backup(Command):
 
     @property
     def running(self):
-        return self._state in jobs.BUSY_STATUS
+        return self._state in status.BUSY_STATUS
 
     def _fetch_state(self, reload=False):
         if reload:
