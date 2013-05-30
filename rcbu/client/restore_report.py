@@ -5,6 +5,7 @@ def _args_from_dict(body):
     return {
         '_config_id': body['BackupConfigurationId'],
         '_config_name': body['BackupConfigurationName'],
+        '_backup_id': body['BackupConfigurationId'],
         '_state': body['State'],
         '_time': {
             'start': body['StartTime'],
@@ -26,14 +27,20 @@ def _args_from_dict(body):
     }
 
 
+def from_dict(restore_id, body):
+    args = _args_from_dict(body)
+    return RestoreReport(restore_id, **args)
+
+
 class RestoreFailed(Exception):
     def __init__(self, report):
         self.message = '{0}:{1}'.format(report._diagnostics, report.errors)
 
 
 class RestoreReport(Report):
-    def __init__(self, restore_id):
+    def __init__(self, restore_id, **kwargs):
         self._id = restore_id
+        [setattr(self, k, v) for k, v in kwargs.items()]
 
     @property
     def id(self):
@@ -49,7 +56,7 @@ class RestoreReport(Report):
 
     @property
     def ok(self):
-        return self._restorable
+        return len(self.errors) == 0
 
     def raise_if_not_ok(self):
         if not self.ok:

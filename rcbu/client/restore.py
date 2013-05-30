@@ -99,7 +99,7 @@ class Restore(Command):
         return resp
 
     def start(self):
-        return self._action(starting=False)
+        return self._action(starting=True)
 
     def stop(self):
         return self._action(starting=False)
@@ -111,7 +111,7 @@ class Restore(Command):
         headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return restore_report.from_dict(resp.json())
+        return restore_report.from_dict(self.id, resp.json())
 
     def _is_done(self):
         state = self._fetch_state(reload=True)
