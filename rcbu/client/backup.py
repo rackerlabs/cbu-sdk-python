@@ -104,7 +104,7 @@ class Backup(Command):
 
     def _is_done(self):
         state = self._fetch_state(reload=True)
-        return state in jobs.DONE_STATUS
+        return state in status.DONE_STATUS
 
     def wait_for_completion(self, poll_interval=60, timeout=None):
         time_waited = 0
