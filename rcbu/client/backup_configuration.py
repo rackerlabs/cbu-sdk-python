@@ -207,7 +207,7 @@ class BackupConfiguration(Configuration):
                                    self.id)
         headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status
+        resp.raise_for_status()
         parsed = resp.json()
         args = _args_from_dict(parsed)
         [setattr(self, k, v) for k, v in args.items()]
