@@ -36,6 +36,25 @@ def from_file(path, connection=None):
     return from_dict(data, connection)
 
 
+class Status(object):
+    def __init__(self, restore_id, connection):
+        self.restore_id = restore_id
+        self._connection = connection
+
+    @property
+    def id(self):
+        return self.restore_id
+
+    @property
+    def state(self):
+        url = '{0}/{1}/{2}'.format(self._connection.host,
+                                   'restore', self.id)
+        headers = {'x-auth-token': self._connection.token}
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()
+        return jobs._int_to_status[resp.json()['RestoreStateId']]
+
+
 class Restore(Command):
     def __init__(self, restore_id, connection=None, **kwargs):
         self._id = restore_id
@@ -56,18 +75,48 @@ class Restore(Command):
         return self._state
 
     @property
-    def inclusions(self):
-        pass
+    def id(self):
+        return self._id
 
-    @property
-    def exclusions(self):
-        pass
+    def connect(self, connection):
+        self._connection = connection
+
+    def _action(self, starting=True):
+        action = 'StartManual' if starting else 'StopManual'
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'restore',
+                                   'action-requested')
+        headers = {'X-Auth-Token': self._connection.token,
+                   'content-type': 'application/json'}
+        data = json.dumps({'Action': action, 'Id': self.id})
+        resp = requests.post(url, headers=headers, data=data, verify=False)
+        resp.raise_for_status()
+        self._state = 'Preparing' if starting else 'Stopped'
+        return resp
 
     def start(self):
-        pass
+        return self._action(starting=False)
 
     def stop(self):
-        pass
+        return self._action(starting=False)
 
+    @property
     def report(self):
-        pass
+        url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
+                                       'restore', 'report', self.id)
+        headers = {'x-auth-token': self._connection.token}
+        resp = requests.get(url, headers=headers, verify=False)
+        resp.raise_for_status()
+        return restore_report.from_dict(resp.json())
+
+    def _is_done(self):
+        state = self._fetch_state(reload=True)
+        return state in jobs.DONE_STATUS
+
+    def wait_for_completion(self, poll_interval=60, timeout=None):
+        time_waited = 0
+        while not self._is_done():
+            start = time.time()
+            time.sleep(poll_interval)
+            time_waited += time.time() - start
+            if timeout and time_waited > timeout:
+                raise RuntimeError('Backup took too long.')
