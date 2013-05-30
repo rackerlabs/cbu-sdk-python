@@ -114,7 +114,7 @@ class Connection(Show):
         backup_action = backup.Backup(config, connection=self)
         return backup_action
 
-    def create_restore(self, backup, source_agent, destination_path,
+    def create_restore(self, _backup, source_agent, destination_path,
                        destination_agent=None, overwrite=False):
         raise NotImplementedError()
         if not destination_agent:
