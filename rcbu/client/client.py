@@ -73,23 +73,19 @@ class Connection(Show):
 
     @property
     def backup_history(self):
-        return jobs.backup_history(self._connection.host,
-                                   self._connection.key)
+        return jobs.backup_history(self.endpoint, self.token)
 
     @property
     def restore_history(self):
-        return jobs.restore_history(self._connection.host,
-                                    self._connection.key)
+        return jobs.restore_history(self.endpoint, self.token)
 
     @property
     def active_backups(self):
-        return jobs.active_backups(self._connection.host,
-                                   self._connection.key)
+        return jobs.active_backups(self.endpoint, self.token)
 
     @property
     def active_restores(self):
-        return jobs.active_restores(self._connection.host,
-                                    self._connection.key)
+        return jobs.active_restores(self.endpoint, self.token)
 
     def get_agent(self, agent_id):
         url = '{0}/{1}/{2}'.format(self.endpoint, 'agent', agent_id)
