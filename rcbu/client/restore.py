@@ -92,7 +92,11 @@ class Restore(Command):
                                    'action-requested')
         headers = {'X-Auth-Token': self._connection.token,
                    'content-type': 'application/json'}
-        data = json.dumps({'Action': action, 'Id': self.id})
+
+        data_dict = {'Action': action, 'Id': self.id}
+        if self._encrypted:
+            data_dict['EncryptedPassword'] = self._encrypted_password
+        data = json.dumps(data_dict)
         resp = requests.post(url, headers=headers, data=data, verify=False)
         resp.raise_for_status()
         self._state = 'Preparing' if starting else 'Stopped'
