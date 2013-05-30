@@ -6,6 +6,7 @@ import requests
 from rcbu.client.command import Command
 import rcbu.client.backup_report as backup_report
 from rcbu.common.jobs import DONE_STATUS
+from rcbu.utils.perf import Timer
 
 
 def _args_from_dict(body):
@@ -108,8 +109,8 @@ class Backup(Command):
     def wait_for_completion(self, poll_interval=60, timeout=None):
         time_waited = 0
         while not self._is_done():
-            start = time.time()
-            time.sleep(poll_interval)
-            time_waited += time.time() - start
+            with Timer() as start:
+                time.sleep(poll_interval)
+            time_waited += start.elapsed
             if timeout and time_waited > timeout:
                 raise RuntimeError('Backup took too long.')
