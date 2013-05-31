@@ -61,7 +61,7 @@ Install
 
 .. code-block:: bash
 
-    pip install git+https://github.com/racker/python-cloudbackup-client
+    pip install git+https://github.com/rackerlabs/python-cloudbackup-sdk
 
 ============
 Contributing
@@ -71,7 +71,7 @@ Some simple guides:
 
 * Unit tests for new features
 * Keep the code clean - flake8
-* Keep the code free of warnings and errors - pylint
+* Be wary of warnings and errors - pylint
 * >95% code coverage - keep it strong
 * Be `Pythonic`_
 
