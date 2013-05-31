@@ -79,4 +79,4 @@ If you have any questions, please check in with Alejandro Cabrera
 <alejandro.cabrera@rackspace.com>.
 
 .. _Pythonic: http://www.python.org/dev/peps/pep-0020/
-.. _backup_config.json: https://github.com/racker/python-cloudbackup-client/blob/master/examples/create_a_backup/backup_config.json
+.. _backup_config.json: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/examples/create_a_backup/backup_config.json
