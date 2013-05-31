@@ -1,4 +1,5 @@
 from rcbu.client.report import Report
+from rcbu.common.exceptions import RestoreFailed
 
 
 def _args_from_dict(body):
@@ -30,11 +31,6 @@ def _args_from_dict(body):
 def from_dict(restore_id, body):
     args = _args_from_dict(body)
     return RestoreReport(restore_id, **args)
-
-
-class RestoreFailed(Exception):
-    def __init__(self, report):
-        self.message = '{0}:{1}'.format(report._diagnostics, report.errors)
 
 
 class RestoreReport(Report):
