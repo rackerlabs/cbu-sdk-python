@@ -1,4 +1,5 @@
 from rcbu.client.report import Report
+from rcbu.common.exceptions import BackupFailed
 
 
 def _args_from_dict(body):
@@ -33,11 +34,6 @@ def _args_from_dict(body):
 def from_dict(body, connection=None):
     args = _args_from_dict(body)
     return BackupReport(body['BackupId'], connection, **args)
-
-
-class BackupFailed(Exception):
-    def __init__(self, report):
-        self.message = '{0}:{1}'.format(report._diagnostics, report.errors)
 
 
 class BackupReport(Report):
