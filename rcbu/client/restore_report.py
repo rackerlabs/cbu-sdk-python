@@ -1,5 +1,4 @@
 import rcbu.client.report as report
-from rcbu.common.exceptions import RestoreFailed
 
 
 def _args_from_dict(body):
@@ -23,9 +22,9 @@ def from_dict(restore_id, body):
     return RestoreReport(restore_id, **args)
 
 
-class RestoreReport(Report):
+class RestoreReport(report.Report):
     def __init__(self, report_id, **kwargs):
-        Report.__init__(self, report_id, kwargs)
+        report.Report.__init__(self, report_id, 'restore', kwargs)
 
     @property
     def files_restored(self):
