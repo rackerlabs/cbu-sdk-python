@@ -1,5 +1,4 @@
 import rcbu.client.report as report
-from rcbu.common.exceptions import BackupFailed
 
 
 def _args_from_dict(body):
@@ -25,9 +24,9 @@ def from_dict(backup_id, body):
     return BackupReport(backup_id, **args)
 
 
-class BackupReport(Report):
+class BackupReport(report.Report):
     def __init__(self, report_id, **kwargs):
-        Report.__init__(self, report_id, kwargs)
+        report.Report.__init__(self, report_id, 'backup', kwargs)
 
     @property
     def ok(self):

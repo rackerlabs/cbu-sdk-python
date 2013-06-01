@@ -1,3 +1,6 @@
+import rcbu.common.exceptions as exceptions
+
+
 def _args_from_dict(body):
     return {
         '_config_id': body['BackupConfigurationId'],
@@ -15,9 +18,16 @@ def _args_from_dict(body):
     }
 
 
+_error_class = {
+    'backup': exceptions.BackupFailed,
+    'restore': exceptions.RestoreFailed
+}
+
+
 class Report(object):
-    def __init__(self, report_id, **kwargs):
+    def __init__(self, report_id, report_type, **kwargs):
         self.report_id = report_id
+        self._type = report_type
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     @property
@@ -58,4 +68,4 @@ class Report(object):
 
     def raise_if_not_ok(self):
         if not self.ok:
-            raise RestoreFailed(self)
+            raise _error_class[self._type](self)
