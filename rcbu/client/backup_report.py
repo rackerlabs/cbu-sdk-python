@@ -26,7 +26,7 @@ def from_dict(backup_id, body):
 
 class BackupReport(report.Report):
     def __init__(self, report_id, **kwargs):
-        report.Report.__init__(self, report_id, 'backup', kwargs)
+        report.Report.__init__(self, report_id, 'backup', **kwargs)
 
     @property
     def ok(self):
