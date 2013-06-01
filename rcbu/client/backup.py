@@ -69,7 +69,7 @@ class Backup(Command):
     def start(self):
         resp = self._action(starting=True)
         self._backup_id = int(resp.content)
-        return Status(self._backup_id, self._connection)
+        return status.Status(self._backup_id, 'backup', self._connection)
 
     def stop(self):
         return self._action(starting=False)
