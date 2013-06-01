@@ -1,4 +1,4 @@
-def _parse_args_from_dict(body):
+def _args_from_dict(body):
     return {
         '_config_id': body['BackupConfigurationId'],
         '_config_name': body['BackupConfigurationName'],
