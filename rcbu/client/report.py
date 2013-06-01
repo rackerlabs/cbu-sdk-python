@@ -32,7 +32,7 @@ class Report(object):
 
     @property
     def id(self):
-        return self._id
+        return self.report_id
 
     @property
     def state(self):
@@ -60,7 +60,7 @@ class Report(object):
 
     @property
     def ended(self):
-        return self._time['ended']
+        return self._time['end']
 
     @property
     def duration(self):

@@ -24,7 +24,7 @@ def from_dict(restore_id, body):
 
 class RestoreReport(report.Report):
     def __init__(self, report_id, **kwargs):
-        report.Report.__init__(self, report_id, 'restore', kwargs)
+        report.Report.__init__(self, report_id, 'restore', **kwargs)
 
     @property
     def files_restored(self):
