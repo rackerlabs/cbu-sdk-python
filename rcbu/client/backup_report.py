@@ -42,9 +42,9 @@ class BackupReport(Report):
         return self._searched['bytes']
 
     @property
-    def files_saved(self):
+    def files_stored(self):
         return self._backup['files']
 
     @property
-    def bytes_saved(self):
+    def bytes_stored(self):
         return self._backup['bytes']
