@@ -4,13 +4,13 @@ import time
 import requests
 
 from rcbu.client.command import Command
+from rcbu.utils.perf import Timer
 import rcbu.client.backup_report as backup_report
 import rcbu.common.status as status
-from rcbu.utils.perf import Timer
 
 
 def _args_from_dict(body):
-    args = {
+    return {
         '_config_id': body['BackupConfigurationId'],
         '_state': body['CurrentState'],
         '_agent_id': body['MachineAgentId'],
@@ -20,30 +20,10 @@ def _args_from_dict(body):
             'exponent_hex': body['EncryptionKey']['ExponentHex']
         }
     }
-    return args
 
 
 def from_dict(body):
     return Backup(body['BackupId'], _args_from_dict(body))
-
-
-class Status(object):
-    def __init__(self, backup_id, connection):
-        self.backup_id = backup_id
-        self._connection = connection
-
-    @property
-    def id(self):
-        return self.backup_id
-
-    @property
-    def state(self):
-        url = '{0}/{1}/{2}'.format(self._connection.host,
-                                   'backup', self.backup_id)
-        headers = {'x-auth-token': self._connection.token}
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-        return resp.json()['CurrentState']
 
 
 class Backup(Command):
@@ -58,7 +38,8 @@ class Backup(Command):
 
     def _fetch_state(self, reload=False):
         if reload:
-            self._state = Status(self.id, self._connection).state
+            self._state = status.Status(self.id, 'backup',
+                                        self._connection).state
         return self._state
 
     @property

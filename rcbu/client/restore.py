@@ -4,10 +4,9 @@ import time
 import requests
 
 from rcbu.client.command import Command
-import rcbu.common.status as status
 from rcbu.utils.perf import Timer
+import rcbu.common.status as status
 import rcbu.client.restore_report as restore_report
-from rcbu.common.status import int_to_status
 
 
 def _args_from_dict(body):
@@ -42,25 +41,6 @@ def from_file(path, connection=None):
     return from_dict(data, connection)
 
 
-class Status(object):
-    def __init__(self, restore_id, connection):
-        self.restore_id = restore_id
-        self._connection = connection
-
-    @property
-    def id(self):
-        return self.restore_id
-
-    @property
-    def state(self):
-        url = '{0}/{1}/{2}'.format(self._connection.host,
-                                   'restore', self.id)
-        headers = {'x-auth-token': self._connection.token}
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
-        return int_to_status[resp.json()['RestoreStateId']]
-
-
 class Restore(Command):
     def __init__(self, restore_id, connection=None, **kwargs):
         self._id = restore_id
@@ -73,7 +53,8 @@ class Restore(Command):
 
     def _fetch_state(self, reload=False):
         if reload:
-            self._state = Status(self.id, self._connection).state
+            self._state = status.Status(self.id, 'restore',
+                                        self._connection).state
         return self._state
 
     @property
