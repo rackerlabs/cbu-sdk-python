@@ -1,4 +1,4 @@
-int_to_status = {
+int_to_status = lambda n: {
     0: 'Creating',
     1: 'Queued',
     2: 'InProgress',
@@ -9,14 +9,12 @@ int_to_status = {
     7: 'StopRequested',
     8: 'CompletedWithErrors',
     9: 'Preparing'
-}
+}[n]
 
 BUSY_STATUS = ('StartRequested', 'Creating', 'InProgress',
                'StopRequested', 'Queued', 'Preparing')
 DONE_STATUS = ('Completed', 'CompletedWithErrors', 'Stopped',
                'Skipped', 'Failed', 'Missed')
-
-int_to_status = lambda n: _int_to_status[n]
 
 
 def busy(status):
