@@ -1,3 +1,6 @@
+import requests
+
+
 int_to_status = lambda n: {
     0: 'Creating',
     1: 'Queued',
@@ -21,12 +24,13 @@ def busy(status):
     return status in BUSY_STATUS
 
 
-class Status(object):
-    _state_interpret = {
-        'restore': lambda r: int_to_status(r.json()['RestoreStateId']),
-        'backup': lambda r: r.json()['CurrentState']
-    }
+_state_interpret = {
+    'restore': lambda r: int_to_status(r.json()['RestoreStateId']),
+    'backup': lambda r: r.json()['CurrentState']
+}
 
+
+class Status(object):
     def __init__(self, command_id, command_type, connection):
         self._id = command_id
         self._type = command_type
