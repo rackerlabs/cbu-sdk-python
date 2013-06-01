@@ -100,7 +100,8 @@ class Backup(Command):
         headers = {'x-auth-token': self._connection.token}
         resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
-        return backup_report.from_dict(resp.json())
+        parsed = resp.json()
+        return backup_report.from_dict(parsed['BackupId'], parsed)
 
     def _is_done(self):
         state = self._fetch_state(reload=True)
