@@ -217,7 +217,7 @@ class BackupConfiguration(Configuration):
         data = {os.path.realpath(p) for p in paths}
 
         # prevent inconsistent state by checking inclusions
-        # and exclusions won't contain common items
+        # and exclusions don't contain common items
         if are_exclusions:
             _assert_set_difference_empty(self._inclusions, data)
             self._exclusions = data
