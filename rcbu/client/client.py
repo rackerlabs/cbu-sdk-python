@@ -31,18 +31,21 @@ class Client(Show, ExposesActivities):
         return [backup_config.from_dict(config, self) for config in body]
 
     def get_agent(self, agent_id):
-        url = '{0}/{1}/{2}'.format(self.endpoint, 'agent', agent_id)
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'agent',
+                                   agent_id)
         resp = self._connection.request(requests.get, url)
         return agent.from_dict(resp.json(), connection=self._connection)
 
     def get_backup_configuration(self, config_id):
-        url = '{0}/{1}/{2}'.format(self.endpoint, 'backup-configuration',
+        url = '{0}/{1}/{2}'.format(self._connection.host,
+                                   'backup-configuration',
                                    config_id)
         resp = self._connection.request(requests.get, url)
         return backup_config.from_dict(resp.json())
 
     def get_backup_report(self, backup_id):
-        url = '{0}/{1}/{2}/{3}'.format(self.endpoint, 'backup', 'report',
+        url = '{0}/{1}/{2}/{3}'.format(self._connection.host, 'backup',
+                                       'report',
                                        backup_id)
         resp = self._connection.request(requests.get, url)
         return resp.json()
@@ -53,7 +56,7 @@ class Client(Show, ExposesActivities):
 
     def create_restore(self, backup_id, source_agent, destination_path,
                        destination_agent=None, overwrite=False):
-        url = '{0}/{1}'.format(self.endpoint, 'restore')
+        url = '{0}/{1}'.format(self._connection.host, 'restore')
         data = json.dumps({
             'BackupId': backup_id,
             'BackupMachineId': source_agent.id,
