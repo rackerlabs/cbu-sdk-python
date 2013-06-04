@@ -140,7 +140,7 @@ def manually():
 
 
 def weekly(day_of_week,
-           hour=randint(0, 23), minute=randint(0, 59)):
+           hour=None, minute=None):
     """Returns a schedule appropriate for establishing a weekly backup.
 
     args:
@@ -149,22 +149,26 @@ def weekly(day_of_week,
       hour: On what hour should this backup run? [0 - 23]
       minute: On what minute should this backup run? [0 - 59]
     """
+    hour_ = randint(0, 23) if hour is None else hour
+    minute_ = randint(0, 59) if minute is None else minute
     return Schedule(ScheduleFrequency.Weekly, None,
-                    day_of_week=day_of_week, hour=hour, minute=minute)
+                    day_of_week=day_of_week, hour=hour_, minute=minute_)
 
 
-def daily(hour=randint(0, 23), minute=randint(0, 59)):
+def daily(hour=None, minute=None):
     """Returns a schedule appropriate for establishing a daily backup.
 
     args:
       hour: On what hour should this backup run? [0 - 23]
       minute: On what minute should this backup run? [0 - 59]
     """
+    hour_ = randint(0, 23) if hour is None else hour
+    minute_ = randint(0, 59) if minute is None else minute
     return Schedule(ScheduleFrequency.Daily, None,
-                    day_of_week=None, hour=hour, minute=minute)
+                    day_of_week=None, hour=hour_, minute=minute_)
 
 
-def hourly(interval, minute=randint(0, 59)):
+def hourly(interval, minute=None):
     """Returns a schedule appropriate for establishing an hourly backup.
 
     args:
@@ -172,5 +176,6 @@ def hourly(interval, minute=randint(0, 59)):
                 this backup run? [0 - 23]
       minute: On what minute should this backup run? [0 - 59]
     """
+    minute_ = randint(0, 59) if minute is None else minute
     return Schedule(ScheduleFrequency.Hourly, interval=interval,
-                    day_of_week=None, hour=None, minute=minute)
+                    day_of_week=None, hour=None, minute=minute_)
