@@ -19,7 +19,7 @@ class Client(Show, ExposesActivities):
     @property
     def agents(self):
         url = self._connection.host + '/user/agents'
-        resp = self._connection.request(requests.get(url))
+        resp = self._connection.request(requests.get, url)
         return [agent.from_dict(a, connection=self._connection)
                 for a in resp.json()]
 

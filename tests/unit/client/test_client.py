@@ -28,18 +28,18 @@ class TestValidConnection(unittest.TestCase):
 
     def test_connection_has_correct_properties(self):
         self.assertEqual(self.conn.token, MOCK_KEY)
-        self.assertEqual(self.conn.endpoint, MOCK_ENDPOINT_STRIPPED)
+        self.assertEqual(self.conn.host, MOCK_ENDPOINT_STRIPPED)
 
     @httprettified
     def test_agents_raises_403_on_invalid_auth(self):
-        url = self.conn.endpoint + '/user/agents'
+        url = self.conn.host + '/user/agents'
         HTTPretty.register_uri(HTTPretty.GET, url, status=403)
         with self.assertRaises(HTTPError):
             self.client.agents
 
     @httprettified
     def test_backup_configurations_raises_403_on_invalid_auth(self):
-        url = self.conn.endpoint + '/backup-configuration'
+        url = self.conn.host + '/backup-configuration'
         HTTPretty.register_uri(HTTPretty.GET, url, status=403)
         with self.assertRaises(HTTPError):
             self.client.backup_configurations

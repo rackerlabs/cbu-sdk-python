@@ -3,7 +3,7 @@ import unittest
 
 from httpretty import HTTPretty, httprettified
 
-from rcbu.client.client import Connection
+from rcbu.client.connection import Connection
 from rcbu.common.constants import IDENTITY_TOKEN_URL
 import tests.mock.auth as mock_auth
 import tests.mock.configuration as mock_config

@@ -56,7 +56,7 @@ class Connection(Show):
 
     @property
     def api_version(self):
-        return self.endpoint.split('/')[-1].lstrip('v')
+        return self.host.split('/')[-1].lstrip('v')
 
     @property
     def api_version_tuple(self):
