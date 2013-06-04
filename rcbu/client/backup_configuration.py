@@ -53,7 +53,7 @@ def _args_from_dict(resp):
     return args
 
 
-def _assert_set_difference_empty(lhs, rhs):
+def _raise_if_not_set_difference_empty(lhs, rhs):
     diff = lhs & rhs
     if len(diff) > 0:
         raise InconsistentInclusionsError(diff)
@@ -219,10 +219,10 @@ class BackupConfiguration(Configuration):
         # prevent inconsistent state by checking inclusions
         # and exclusions don't contain common items
         if are_exclusions:
-            _assert_set_difference_empty(self._inclusions, data)
+            _raise_if_not_set_difference_empty(self._inclusions, data)
             self._exclusions = data
         else:
-            _assert_set_difference_empty(self._exclusions, data)
+            _raise_if_not_set_difference_empty(self._exclusions, data)
             self._inclusions = data
 
     def reload(self):
