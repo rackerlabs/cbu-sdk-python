@@ -83,6 +83,36 @@ class Schedule(object):
         self._hour = hour
         self._minute = minute
 
+    @property
+    def frequency(self):
+        """Returns the frequency in a way that the API understand."""
+        return ScheduleFrequency.to_api(self._frequency)
+
+    @property
+    def interval(self):
+        """Returns the hourly interval used for this schedule."""
+        return self._interval
+
+    @property
+    def day_of_week(self):
+        """Returns the day of the week this schedule uses."""
+        return self._day_of_week
+
+    @property
+    def hour(self):
+        """Adjusts the hour to a 12-hour clock."""
+        return self._hour if self._hour < 12 else self._hour - 12
+
+    @property
+    def minute(self):
+        """Returns the minute this schedule uses."""
+        return self._minute
+
+    @property
+    def period(self):
+        """Returns 'Am' or 'Pm', depending on the value of the hour."""
+        return "Am" if self._hour < 12 else "Pm"
+
     def _validate(self, frequency, interval, day_of_week, hour, minute):
         """Ensures that schedule args are valid, checking
         all the corner cases and all the boundaries."""
@@ -92,16 +122,13 @@ class Schedule(object):
     def to_api(self):
         """Returns this schedule in a format that the API
         understands."""
-        hour = self._hour if self._hour < 12 else self._hour - 12
-        is_hourly = self._frequency == ScheduleFrequency.Hourly
-        interval = self._interval if is_hourly else None
         return {
-            "Frequency": ScheduleFrequency.to_api(self._frequency),
-            "StartTimeHour": hour,
-            "StartTimeMinute": self._minute,
+            "Frequency": self.frequency,
+            "StartTimeHour": self.hour,
+            "StartTimeMinute": self.minute,
             "StartTimeAmPm": "Am" if self._hour < 12 else "Pm",
-            "DayOfWeekId": self._day_of_week,
-            "HourInterval": interval
+            "DayOfWeekId": self.day_of_week,
+            "HourInterval": self.interval
         }
 
 
