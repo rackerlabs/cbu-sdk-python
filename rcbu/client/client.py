@@ -20,8 +20,8 @@ class Client(Show, ExposesActivities):
     def agents(self):
         url = self.endpoint + '/user/agents'
         resp = self._connection.request(requests.get(url))
-        resp.raise_for_status()
-        return [agent.from_dict(a, connection=self._connection) for a in body]
+        return [agent.from_dict(a, connection=self._connection)
+                for a in resp.json()]
 
     @property
     def backup_configurations(self):

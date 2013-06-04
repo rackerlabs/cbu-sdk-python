@@ -156,7 +156,7 @@ class BackupConfiguration(Configuration):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    'backup-configuration',
                                    self.config_id)
-        resp = self._connection.request(requests.delete, url)
+        self._connection.request(requests.delete, url)
 
     @property
     def schedule(self):
@@ -220,7 +220,7 @@ class BackupConfiguration(Configuration):
             method = requests.put
 
         data = to_json(self)
-        resp = self._connection.request(method, url, headers=headers, data=data)
+        resp = self._connection.request(method, url, data=data)
         return resp.json() if creating else None
 
     def create(self):

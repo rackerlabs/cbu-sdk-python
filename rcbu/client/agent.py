@@ -96,7 +96,7 @@ class Agent(Show, ExposesActivities):
             'MachineAgentId': self.id,
             'EncryptedPasswordHex': encrypted_key_hex
         })
-        resp = self._connection.request(requests.post, url, data=data)
+        self._connection.request(requests.post, url, data=data)
         self._encrypted = True
 
     @property
@@ -109,7 +109,7 @@ class Agent(Show, ExposesActivities):
             'MachineAgentId': self.id,
             'Enable': enabled
         })
-        resp = self._connection.request(requests.post, url, data=data)
+        self._connection.request(requests.post, url, data=data)
         self._enabled = enabled
 
     def enable(self):
@@ -121,4 +121,4 @@ class Agent(Show, ExposesActivities):
     def delete(self):
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'delete')
         data = json.dumps({'MachineAgentId': self.id})
-        resp = self._connection.request(requests.post, url, data=data)
+        self._connection.request(requests.post, url, data=data)
