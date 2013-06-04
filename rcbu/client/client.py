@@ -13,19 +13,19 @@ import rcbu.client.restore as restore
 class Client(Show, ExposesActivities):
     def __init__(self, connection):
         self._connection = connection
-        ExposesActivities.__init__(self, self._connection.endpoint,
+        ExposesActivities.__init__(self, self._connection.host,
                                    self._connection.token)
 
     @property
     def agents(self):
-        url = self.endpoint + '/user/agents'
+        url = self._connection.host + '/user/agents'
         resp = self._connection.request(requests.get(url))
         return [agent.from_dict(a, connection=self._connection)
                 for a in resp.json()]
 
     @property
     def backup_configurations(self):
-        url = self.endpoint + '/backup-configuration'
+        url = self._connection.host + '/backup-configuration'
         resp = self._connection.request(requests.get, url)
         body = resp.json()
         return [backup_config.from_dict(config, self) for config in body]

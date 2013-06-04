@@ -43,7 +43,7 @@ class Agent(Show, ExposesActivities):
         self.agent_id = agent_id
         self._connection = connection
         ExposesActivities.__init__(self,
-                                   self._connection.endpoint,
+                                   self._connection.host,
                                    self._connection.token,
                                    agent_id)
         [setattr(self, k, v) for k, v in kwargs.items()]
