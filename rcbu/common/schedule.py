@@ -52,10 +52,10 @@ def _validate_hourly(interval, day_of_week, hour, minute):
 
 # encode the validation process as a dictionary of valid schedule frequencies
 _validate_fn = {
-    ScheduleFrequency.Manual: lambda i, d, h, m: _validate_manual(i, d, h, m),
-    ScheduleFrequency.Weekly: lambda i, d, h, m: _validate_weekly(i, d, h, m),
-    ScheduleFrequency.Daily: lambda i, d, h, m: _validate_daily(i, d, h, m),
-    ScheduleFrequency.Hourly: lambda i, d, h, m: _validate_hourly(i, d, h, m)
+    ScheduleFrequency.Manual: _validate_manual,
+    ScheduleFrequency.Weekly: _validate_weekly,
+    ScheduleFrequency.Daily: _validate_daily,
+    ScheduleFrequency.Hourly: _validate_hourly
 }
 
 
