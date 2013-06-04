@@ -51,7 +51,13 @@ class Client(Show, ExposesActivities):
         return resp.json()
 
     def create_backup(self, config):
-        backup_action = backup.Backup(config, connection=self._connection)
+        backup_action = backup.Backup(config.id, connection=self._connection)
+        return backup_action
+
+    def get_backup(self, backup_id):
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'backup', backup_id)
+        resp = self._connection.request(requests.get, url)
+        backup_action = backup.from_dict(resp.json(), self._connection)
         return backup_action
 
     def create_restore(self, backup_id, source_agent, destination_path,
