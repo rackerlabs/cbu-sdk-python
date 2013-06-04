@@ -22,28 +22,28 @@ class ScheduleFrequency(object):
         return ScheduleFrequency._to_api[value]
 
 
-def _validate_manual(self, interval, day_of_week, hour, minute):
+def _validate_manual(interval, day_of_week, hour, minute):
     assert_is_none('Hourly interval', interval)
     assert_is_none('Day of week', day_of_week)
     assert_is_none('Hour', hour)
     assert_is_none('Minute', minute)
 
 
-def _validate_weekly(self, interval, day_of_week, hour, minute):
+def _validate_weekly(interval, day_of_week, hour, minute):
     assert_is_none('Hourly interval', interval)
     assert_bounded('Day of week', 0, 6, day_of_week)
     assert_bounded('Hour', 0, 23, hour)
     assert_bounded('Minute', 0, 59, minute)
 
 
-def _validate_daily(self, interval, day_of_week, hour, minute):
+def _validate_daily(interval, day_of_week, hour, minute):
     assert_is_none('Hourly interval', interval)
     assert_is_none('Day of week', day_of_week)
     assert_bounded('Hour', 0, 23, hour)
     assert_bounded('Minute', 0, 59, minute)
 
 
-def _validate_hourly(self, interval, day_of_week, hour, minute):
+def _validate_hourly(interval, day_of_week, hour, minute):
     assert_bounded('Hourly interval', 0, 23, interval)
     assert_is_none('Day of week', day_of_week)
     assert_is_none('Hour', hour)
