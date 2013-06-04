@@ -19,7 +19,7 @@ class ScheduleFrequency(object):
 
     @classmethod
     def to_api(cls, value):
-        return ScheduleFrequency._to_api.get[value]
+        return ScheduleFrequency._to_api[value]
 
 
 def _validate_manual(self, interval, day_of_week, hour, minute):
