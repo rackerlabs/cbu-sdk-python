@@ -43,7 +43,7 @@ class Agent(Show, ExposesActivities):
         self.agent_id = agent_id
         self._connection = connection
         ExposesActivities.__init__(self,
-                                   self._connection.endpoint,
+                                   self._connection.host,
                                    self._connection.token,
                                    agent_id)
         [setattr(self, k, v) for k, v in kwargs.items()]
@@ -79,9 +79,7 @@ class Agent(Show, ExposesActivities):
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        'backup-configuration', 'system',
                                        self.id)
-        headers = {'x-auth-token': self._connection.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.get, url)
         return [backup_config.from_dict(b) for b in resp.json()]
 
     @property
@@ -94,14 +92,11 @@ class Agent(Show, ExposesActivities):
                              "{} for more details".format(ENCRYPT_KEY_URL))
 
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'encrypt')
-        headers = {'x-auth-token': self._connection.token,
-                   'content-type': 'application/json'}
         data = json.dumps({
             'MachineAgentId': self.id,
             'EncryptedPasswordHex': encrypted_key_hex
         })
-        resp = requests.post(url, headers=headers, data=data, verify=False)
-        resp.raise_for_status()
+        self._connection.request(requests.post, url, data=data)
         self._encrypted = True
 
     @property
@@ -110,14 +105,11 @@ class Agent(Show, ExposesActivities):
 
     def _toggle(self, enabled=True):
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'enable')
-        headers = {'x-auth-token': self._connection.token,
-                   'content-type': 'application/json'}
         data = json.dumps({
             'MachineAgentId': self.id,
             'Enable': enabled
         })
-        resp = requests.post(url, headers=headers, data=data, verify=False)
-        resp.raise_for_status()
+        self._connection.request(requests.post, url, data=data)
         self._enabled = enabled
 
     def enable(self):
@@ -128,8 +120,5 @@ class Agent(Show, ExposesActivities):
 
     def delete(self):
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'delete')
-        headers = {'x-auth-token': self._connection.token,
-                   'content-type': 'application/json'}
         data = json.dumps({'MachineAgentId': self.id})
-        resp = requests.post(url, headers=headers, data=data, verify=False)
-        resp.raise_for_status()
+        self._connection.request(requests.post, url, data=data)

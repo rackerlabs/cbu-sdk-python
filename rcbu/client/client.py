@@ -2,7 +2,6 @@ import json
 
 import requests
 
-from rcbu.common.auth import authenticate
 from rcbu.common.show import Show
 from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
@@ -11,100 +10,59 @@ import rcbu.client.backup as backup
 import rcbu.client.restore as restore
 
 
-def _normalize_endpoint(url):
-    idx = url.rfind('/')
-    return url[:idx]
-
-
-def _find_backup_endpoint(endpoints):
-    target = None
-    for entry in endpoints:
-        if entry['type'] == 'rax:backup':
-            target = entry
-            break
-    return _normalize_endpoint(target['endpoints'][0]['publicURL'])
-
-
-class Connection(Show, ExposesActivities):
-    def __init__(self, username, apikey=None, password=None):
-        resp = None
-        assert apikey or password
-
-        if apikey:
-            resp = authenticate(username, apikey=apikey)
-        else:
-            resp = authenticate(username, password=password)
-
-        self.token = resp['access']['token']['id']
-        endpoints = resp['access']['serviceCatalog']
-        self.endpoint = _find_backup_endpoint(endpoints)
-        ExposesActivities.__init__(self, self.endpoint, self.token)
-
-    def __str__(self):
-        return '{0}:{1}'.format('RCBU Connection', self.endpoint)
+class Client(Show, ExposesActivities):
+    def __init__(self, connection):
+        self._connection = connection
+        ExposesActivities.__init__(self, self._connection.host,
+                                   self._connection.token)
 
     @property
     def agents(self):
-        url = self.endpoint + '/user/agents'
-        headers = {'x-auth-token': self.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
-        body = resp.json()
-        return [agent.from_dict(a, connection=self) for a in body]
+        url = self._connection.host + '/user/agents'
+        resp = self._connection.request(requests.get, url)
+        return [agent.from_dict(a, connection=self._connection)
+                for a in resp.json()]
 
     @property
     def backup_configurations(self):
-        url = self.endpoint + '/backup-configuration'
-        headers = {'x-auth-token': self.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
+        url = self._connection.host + '/backup-configuration'
+        resp = self._connection.request(requests.get, url)
         body = resp.json()
         return [backup_config.from_dict(config, self) for config in body]
 
-    @property
-    def host(self):
-        return self.endpoint
-
-    @property
-    def api_version(self):
-        return self.endpoint.split('/')[-1].lstrip('v')
-
-    @property
-    def api_version_tuple(self):
-        return tuple(int(i) for i in self.api_version.split('.'))
-
     def get_agent(self, agent_id):
-        url = '{0}/{1}/{2}'.format(self.endpoint, 'agent', agent_id)
-        headers = {'x-auth-token': self.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
-        return agent.from_dict(resp.json(), connection=self)
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'agent',
+                                   agent_id)
+        resp = self._connection.request(requests.get, url)
+        return agent.from_dict(resp.json(), connection=self._connection)
 
     def get_backup_configuration(self, config_id):
-        url = '{0}/{1}/{2}'.format(self.endpoint, 'backup-configuration',
+        url = '{0}/{1}/{2}'.format(self._connection.host,
+                                   'backup-configuration',
                                    config_id)
-        headers = {'x-auth-token': self.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.get, url)
         return backup_config.from_dict(resp.json())
 
     def get_backup_report(self, backup_id):
-        url = '{0}/{1}/{2}/{3}'.format(self.endpoint, 'backup', 'report',
+        url = '{0}/{1}/{2}/{3}'.format(self._connection.host, 'backup',
+                                       'report',
                                        backup_id)
-        headers = {'x-auth-token': self.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.get, url)
         return resp.json()
 
     def create_backup(self, config):
-        backup_action = backup.Backup(config, connection=self)
+        backup_action = backup.Backup(config.id, connection=self._connection)
+        return backup_action
+
+    def get_backup(self, backup_id):
+        url = '{0}/{1}/{2}'.format(self._connection.host, 'backup', backup_id)
+        resp = self._connection.request(requests.get, url)
+        backup_action = backup.from_dict(resp.json(), self._connection)
         return backup_action
 
     def create_restore(self, backup_id, source_agent, destination_path,
                        destination_agent=None, overwrite=False):
-        url = '{0}/{1}'.format(self.endpoint, 'restore')
-        headers = {'x-auth-token': self.token,
-                   'content-type': 'application/json'}
+        url = '{0}/{1}'.format(self._connection.host, 'restore')
         data = json.dumps({
             'BackupId': backup_id,
             'BackupMachineId': source_agent.id,
@@ -113,7 +71,7 @@ class Connection(Show, ExposesActivities):
             'DestinationPath': destination_path,
             'OverwriteFiles': overwrite
         })
-        resp = requests.put(url, headers=headers, data=data, verify=False)
-        resp.raise_for_status()
-        restore_action = restore.from_dict(resp.json(), connection=self)
+        resp = self._connection.request(requests.put, url, data=data)
+        restore_action = restore.from_dict(resp.json(),
+                                           connection=self._connection)
         return restore_action

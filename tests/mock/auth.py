@@ -26,7 +26,11 @@ def authenticate():
     reply = {
         'access': {
             'token': {
-                'id': MOCK_KEY
+                'expires': '2013-06-05T05:20:28.306-05:00',
+                'id': MOCK_KEY,
+                'tenant': {
+                    'id': 111111
+                }
             },
             'serviceCatalog': backup_endpoint
         }

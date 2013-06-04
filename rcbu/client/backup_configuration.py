@@ -159,11 +159,8 @@ class BackupConfiguration(Configuration):
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        'backup-configuration',
                                        'enable', self.config_id)
-        token = self._connection.token
-        hdrs = {'x-auth-token': token, 'content-type': 'application/json'}
         msg = json.dumps({'Enable': True if enabled else False})
-        resp = requests.post(url, headers=hdrs, data=msg, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.post, url, data=msg)
         assert resp.json()['IsActive'] == enabled
         self._enabled = enabled
 
@@ -182,10 +179,7 @@ class BackupConfiguration(Configuration):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    'backup-configuration',
                                    self.config_id)
-        token = self._connection.token
-        resp = requests.delete(url, headers={'x-auth-token': token},
-                               verify=False)
-        resp.raise_for_status()
+        self._connection.request(requests.delete, url)
 
     @property
     def schedule(self):
@@ -243,9 +237,7 @@ class BackupConfiguration(Configuration):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    'backup-configuration',
                                    self.id)
-        headers = {'x-auth-token': self._connection.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.get, url)
         parsed = resp.json()
         args = _args_from_dict(parsed)
         [setattr(self, k, v) for k, v in args.items()]
@@ -266,12 +258,7 @@ class BackupConfiguration(Configuration):
             method = requests.put
 
         data = to_json(self)
-        headers = {
-            'x-auth-token': self._connection.token,
-            'content-type': 'application/json'
-        }
-        resp = method(url, headers=headers, data=data, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(method, url, data=data)
         return resp.json() if creating else None
 
     def create(self):

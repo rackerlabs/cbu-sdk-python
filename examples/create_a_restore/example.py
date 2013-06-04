@@ -1,6 +1,7 @@
 import sys
 
-from rcbu.client.client import Connection
+from rcbu.client.connection import Connection
+from rcbu.client.client import Client
 
 
 if len(sys.argv) != 3:
@@ -12,10 +13,11 @@ password = sys.argv[2]
 
 print('Connecting...')
 conn = Connection(username, password=password)
+client = Client(conn)
 print('Connected!')
 
 print("Grabbing the core maintainer's agent...")
-ag = [agent for agent in conn.agents if
+ag = [agent for agent in client.agents if
       agent.name.startswith('agent-test-ubuntu')][0]
 print('Minion, do my bidding!')
 
@@ -28,7 +30,7 @@ print('Exclusions:')
 print('    ', conf.exclusions)
 
 print('Starting a backup...')
-backup = conn.create_backup(conf)
+backup = client.create_backup(conf)
 backup.start()
 print('Started! (id: {0})'.format(backup.id))
 
@@ -42,10 +44,10 @@ backup_report.raise_if_not_ok()
 print('All good!')
 
 print('Now creating a restore from this successful backup...')
-restore = conn.create_restore(backup.id, source_agent=ag,
-                              destination_path='/root',
-                              destination_agent=ag,  # by default
-                              overwrite=False)  # by default, too
+restore = client.create_restore(backup.id, source_agent=ag,
+                                destination_path='/root',
+                                destination_agent=ag,  # by default
+                                overwrite=False)  # by default, too
 print('Created restore: {0}'.format(restore.id))
 
 print('Now restoring...')
