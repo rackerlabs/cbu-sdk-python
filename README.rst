@@ -5,7 +5,7 @@ Cloud Backup API Python SDK
 .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk/badge/icon
     :target: http://sonar.drivesrvr-dev.com:9000/dashboard/index/2941
 
-:version: 0.8.18
+:version: 0.8.11
 
 Welcome to the Python bindings to the Rackspace Cloud Backup
 API. These bindings will help you make the most of the Cloud Backup
@@ -25,7 +25,10 @@ Features
 * Python 2.7 and 3.3+ supported
 * Easy to install (pip)
 * Easy to test (nose + tox)
-* Easy to use
+* Designed to be easy to use with `ipython`_
+    - Tab-completion and smart introspection
+    - verbs map to object functions: backup.start()
+    - nouns map to object properties: backup.report
 
 I'll let the code speak for ease of use:
 
@@ -80,3 +83,4 @@ If you have any questions, please check in with Alejandro Cabrera
 
 .. _Pythonic: http://www.python.org/dev/peps/pep-0020/
 .. _backup_config.json: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/examples/create_a_backup/backup_config.json
+.. _ipython: http://ipython.org/

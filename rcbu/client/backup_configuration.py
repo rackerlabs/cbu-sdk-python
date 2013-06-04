@@ -4,6 +4,21 @@ import json
 import requests
 
 from rcbu.client.configuration import Configuration
+from rcbu.common.exceptions import InconsistentInclusionsError
+
+
+def _parse_paths(paths):
+    return {p['FilePath'] for p in paths}
+
+
+def _path_type(path):
+    return 'Folder' if os.path.isdir(path) else 'File'
+
+
+def _paths_to_json(paths):
+    return [{'FilePath': p,
+             'FileItemType': _path_type(p)}
+            for p in paths]
 
 
 def _args_from_dict(resp):
@@ -32,10 +47,16 @@ def _args_from_dict(resp):
             'on_success': resp['NotifySuccess'],
             'on_failure': resp['NotifyFailure']
         },
-        '_inclusions': resp['Inclusions'],
-        '_exclusions': resp['Exclusions']
+        '_inclusions': _parse_paths(resp['Inclusions']),
+        '_exclusions': _parse_paths(resp['Exclusions'])
     }
     return args
+
+
+def _raise_if_not_set_difference_empty(lhs, rhs):
+    diff = lhs & rhs
+    if len(diff) > 0:
+        raise InconsistentInclusionsError(diff)
 
 
 def from_dict(resp, connection=None):
@@ -73,8 +94,8 @@ def to_json(config):
         'NotifyRecipients': notify['email'],
         'NotifySuccess': notify['on_success'],
         'NotifyFailure': notify['on_failure'],
-        'Inclusions': config._inclusions,
-        'Exclusions': config._exclusions
+        'Inclusions': _paths_to_json(config._inclusions),
+        'Exclusions': _paths_to_json(config._exclusions)
     }
     return json.dumps(resp)
 
@@ -86,6 +107,8 @@ class DisconnectedError(Exception):
 class BackupConfiguration(Configuration):
     def __init__(self, config_id, connection=None, **kwargs):
         super(BackupConfiguration, self).__init__(config_id)
+        self._inclusions = set()
+        self._exclusions = set()
         [setattr(self, k, v) for k, v in kwargs.items()]
         self._connection = connection
 
@@ -184,10 +207,10 @@ class BackupConfiguration(Configuration):
     def inclusions(self):
         return self._inclusions
 
-    def set_inclusions(self, paths):
+    def include(self, paths):
         """Updates the inclusions for this backup configuration.
 
-        paths: a [] of paths on the local filesystem.
+        paths: a sequence of paths on the local filesystem.
         """
         self._set_paths(paths, are_exclusions=False)
 
@@ -195,20 +218,23 @@ class BackupConfiguration(Configuration):
     def exclusions(self):
         return self._exclusions
 
-    def set_exclusions(self, paths):
+    def exclude(self, paths):
         """Updates the exclusions for this backup configuration.
 
-        paths: a [] of paths on the local filesystem.
+        paths: a sequence of paths on the local filesystem.
         """
         self._set_paths(paths, are_exclusions=True)
 
     def _set_paths(self, paths, are_exclusions=False):
-        data = [
-            {"FileItemType": ("Folder" if os.path.isdir(p) else "File"),
-             "FilePath": os.path.realpath(p)} for p in paths]
+        data = {os.path.realpath(p) for p in paths}
+
+        # prevent inconsistent state by checking inclusions
+        # and exclusions don't contain common items
         if are_exclusions:
+            _raise_if_not_set_difference_empty(self._inclusions, data)
             self._exclusions = data
         else:
+            _raise_if_not_set_difference_empty(self._exclusions, data)
             self._inclusions = data
 
     def reload(self):
