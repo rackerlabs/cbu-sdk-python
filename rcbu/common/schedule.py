@@ -111,6 +111,8 @@ class Schedule(object):
     @property
     def period(self):
         """Returns 'Am' or 'Pm', depending on the value of the hour."""
+        if self._hour is None:
+            return None
         return "Am" if self._hour < 12 else "Pm"
 
     def _validate(self, frequency, interval, day_of_week, hour, minute):
