@@ -64,9 +64,12 @@ class Connection(Show):
 
     def request(self, method, url, headers=None, data=None, verify=False):
         # todo: add reauth when token is nearing expiration here
-        headers_ = {'x-auth-token': self.token,
-                    'content-type': 'application/json',
-                    'user-agent': 'rackspace-backup-client'}
+        headers_ = {
+            'x-auth-token': self.token,
+            'content-type': 'application/json',
+            'user-agent': 'rackspace-backup-client'
+        }
+
         if headers:
             headers_.update(headers)
         resp = method(url, headers=headers_, data=data, verify=verify)
