@@ -14,11 +14,14 @@ def _args_from_dict(body):
     }
 
 
-def from_dict(body):
-    return Backup(body['BackupId'], _args_from_dict(body))
+def from_dict(body, connection=None):
+    return Backup(config_id=body['BackupConfigurationId'],
+                  backup_id=body['BackupId'],
+                  connection=connection,
+                  **_args_from_dict(body))
 
 
 class Backup(Command):
-    def __init__(self, config, connection, **kwargs):
-        self._config_id = config.id
-        Command.__init__(self, 0, 'backup', connection, **kwargs)
+    def __init__(self, config_id, backup_id=None, connection=None, **kwargs):
+        self._config_id = config_id
+        Command.__init__(self, backup_id, 'backup', connection, **kwargs)

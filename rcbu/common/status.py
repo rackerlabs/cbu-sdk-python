@@ -44,7 +44,5 @@ class Status(object):
     def state(self):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    self._type, self.id)
-        headers = {'x-auth-token': self._connection.token}
-        resp = requests.get(url, headers=headers)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.get, url)
         return _state_interpret[self._type](resp)

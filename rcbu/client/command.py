@@ -53,11 +53,8 @@ class Command(object):
     def _action(self, starting):
         url = '{0}/{1}/{2}'.format(self._connection.host, self._type,
                                    'action-requested')
-        headers = {'X-Auth-Token': self._connection.token,
-                   'content-type': 'application/json'}
         data = self._action_data(starting)
-        resp = requests.post(url, headers=headers, data=data, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.post, url, data=data)
         self._state = 'Preparing' if starting else 'Stopped'
         return resp
 
@@ -80,9 +77,7 @@ class Command(object):
     def report(self):
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        self._type, 'report', self.id)
-        headers = {'x-auth-token': self._connection.token}
-        resp = requests.get(url, headers=headers, verify=False)
-        resp.raise_for_status()
+        resp = self._connection.request(requests.get, url)
         return self._report(resp.json())
 
     def _is_done(self):

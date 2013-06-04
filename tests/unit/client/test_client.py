@@ -4,7 +4,8 @@ import unittest
 from httpretty import HTTPretty, httprettified
 from requests.exceptions import HTTPError
 
-from rcbu.client.client import Connection
+from rcbu.client.connection import Connection
+from rcbu.client.client import Client
 from rcbu.common.constants import IDENTITY_TOKEN_URL
 from tests.mock.auth import (
     authenticate, MOCK_ENDPOINT_STRIPPED, MOCK_KEY
@@ -23,24 +24,25 @@ class TestValidConnection(unittest.TestCase):
     def setUp(self):
         _mock_auth(200)
         self.conn = Connection('a', password='a')
+        self.client = Client(self.conn)
 
     def test_connection_has_correct_properties(self):
         self.assertEqual(self.conn.token, MOCK_KEY)
-        self.assertEqual(self.conn.endpoint, MOCK_ENDPOINT_STRIPPED)
+        self.assertEqual(self.conn.host, MOCK_ENDPOINT_STRIPPED)
 
     @httprettified
     def test_agents_raises_403_on_invalid_auth(self):
-        url = self.conn.endpoint + '/user/agents'
+        url = self.conn.host + '/user/agents'
         HTTPretty.register_uri(HTTPretty.GET, url, status=403)
         with self.assertRaises(HTTPError):
-            self.conn.agents
+            self.client.agents
 
     @httprettified
     def test_backup_configurations_raises_403_on_invalid_auth(self):
-        url = self.conn.endpoint + '/backup-configuration'
+        url = self.conn.host + '/backup-configuration'
         HTTPretty.register_uri(HTTPretty.GET, url, status=403)
         with self.assertRaises(HTTPError):
-            self.conn.backup_configurations
+            self.client.backup_configurations
 
     def test_host(self):
         self.assertEqual(self.conn.host, MOCK_ENDPOINT_STRIPPED)
