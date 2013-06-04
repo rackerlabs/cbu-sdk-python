@@ -168,6 +168,18 @@ class BackupConfiguration(Configuration):
     def schedule(self):
         return self._schedule
 
+    def reschedule(self, schedule):
+        self._schedule.update({
+            'frequency': schedule.frequency,
+            'start_time': {
+                'hour': schedule.hour,
+                'minute': schedule.minute,
+                'am_or_pm?': schedule.period
+            },
+            'hourly_interval': schedule.interval,
+            'day_of_week': schedule.day_of_week
+        })
+
     @property
     def inclusions(self):
         return self._inclusions
