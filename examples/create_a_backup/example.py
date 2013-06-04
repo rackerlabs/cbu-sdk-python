@@ -1,6 +1,7 @@
 import sys
 
-from rcbu.client.client import Connection
+from rcbu.client.connection import Connection
+from rcbu.client.client import Client
 import rcbu.client.backup_configuration as backup_config
 
 
@@ -13,6 +14,7 @@ password = sys.argv[2]
 
 print('Connecting...')
 conn = Connection(username, password=password)
+client = Client(conn)
 print('Connected!')
 
 print('Creating a new configuration...')
@@ -22,7 +24,7 @@ myconf.create()
 print('Created!')
 
 print('Starting a backup...')
-backup = conn.create_backup(myconf)
+backup = client.create_backup(myconf)
 status = backup.start()
 print('Started! (id: {0})'.format(backup.id))
 
