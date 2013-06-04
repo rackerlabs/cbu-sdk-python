@@ -11,8 +11,8 @@ def _parse_paths(paths):
     return {p['FilePath'] for p in paths}
 
 
-def _path_type(paths):
-    return {'Folder' if os.path.isdir(p) else 'File' for p in paths}
+def _path_type(path):
+    return 'Folder' if os.path.isdir(path) else 'File'
 
 
 def _paths_to_json(paths):
