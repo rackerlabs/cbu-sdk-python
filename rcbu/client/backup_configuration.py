@@ -6,7 +6,6 @@ import requests
 from rcbu.common.exceptions import (
     InconsistentInclusionsError, DisconnectedError
 )
-from rcbu.common.show import Show
 
 
 def _parse_paths(paths):
@@ -102,7 +101,7 @@ def to_json(config):
     return json.dumps(resp)
 
 
-class BackupConfiguration(Show):
+class BackupConfiguration(object):
     def __init__(self, config_id, connection=None, **kwargs):
         self._config_id = config_id
         self._inclusions = set()

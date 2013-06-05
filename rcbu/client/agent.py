@@ -2,7 +2,6 @@ import json
 
 import requests
 
-from rcbu.common.show import Show
 from rcbu.common.constants import ENCRYPT_KEY_URL
 from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
@@ -38,7 +37,7 @@ def from_file(path, connection=None):
     return from_dict(data, connection)
 
 
-class Agent(Show, ExposesActivities):
+class Agent(ExposesActivities):
     def __init__(self, agent_id, connection=None, **kwargs):
         self._agent_id = agent_id
         self._connection = connection

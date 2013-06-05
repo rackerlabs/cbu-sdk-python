@@ -2,7 +2,6 @@ import json
 
 import requests
 
-from rcbu.common.show import Show
 from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
 import rcbu.client.agent as agent
@@ -10,7 +9,7 @@ import rcbu.client.backup as backup
 import rcbu.client.restore as restore
 
 
-class Client(Show, ExposesActivities):
+class Client(ExposesActivities):
     def __init__(self, connection):
         self._connection = connection
         ExposesActivities.__init__(self, self._connection.host,
