@@ -105,7 +105,7 @@ def to_json(config):
 
 class BackupConfiguration(Show):
     def __init__(self, config_id, connection=None, **kwargs):
-        super(BackupConfiguration, self).__init__(config_id)
+        self._config_id = config_id
         self._inclusions = set()
         self._exclusions = set()
         [setattr(self, k, v) for k, v in kwargs.items()]
@@ -113,7 +113,7 @@ class BackupConfiguration(Show):
 
     @property
     def id(self):
-        return self.config_id
+        return self._config_id
 
     @property
     def agent_id(self):
