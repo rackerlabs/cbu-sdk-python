@@ -57,4 +57,4 @@ class ExposesActivities(object):
 
     @property
     def busy(self):
-        return len(_any_running(self._host, self._key, self._id)) > 0
+        return _any_running(self._host, self._key, self._id)
