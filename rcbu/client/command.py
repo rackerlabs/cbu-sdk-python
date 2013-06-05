@@ -28,7 +28,7 @@ class Command(object):
 
     @property
     def state(self):
-        return self._state
+        return getattr(self, '_state', 'Unknown')
 
     @property
     def id(self):
