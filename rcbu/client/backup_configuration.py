@@ -3,7 +3,6 @@ import json
 
 import requests
 
-from rcbu.client.configuration import Configuration
 from rcbu.common.exceptions import (
     InconsistentInclusionsError, DisconnectedError
 )
@@ -113,7 +112,7 @@ class BackupConfiguration(Show):
 
     @property
     def id(self):
-        return self._config_id
+        return getattr(self, "_config_id", None)
 
     @property
     def agent_id(self):
@@ -157,7 +156,7 @@ class BackupConfiguration(Show):
         self._check_connection()
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        'backup-configuration',
-                                       'enable', self.config_id)
+                                       'enable', self.id)
         msg = json.dumps({'Enable': True if enabled else False})
         resp = self._connection.request(requests.post, url, data=msg)
         assert resp.json()['IsActive'] == enabled
@@ -177,7 +176,7 @@ class BackupConfiguration(Show):
         self._check_connection()
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    'backup-configuration',
-                                   self.config_id)
+                                   self.id)
         self._connection.request(requests.delete, url)
 
     @property
@@ -253,7 +252,7 @@ class BackupConfiguration(Show):
         else:
             url = '{0}/{1}/{2}'.format(self._connection.host,
                                        'backup-configuration',
-                                       self.config_id)
+                                       self.id)
             method = requests.put
 
         data = to_json(self)
@@ -267,7 +266,7 @@ class BackupConfiguration(Show):
         new configuration that was created.
         """
         resp = self._create_or_update(creating=True)
-        self.config_id = resp['BackupConfigurationId']
+        self._config_id = resp['BackupConfigurationId']
 
     def update(self):
         """Takes the local values and updates the remote config."""
