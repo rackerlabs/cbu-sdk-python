@@ -1,5 +1,4 @@
 from rcbu.common.auth import authenticate
-from rcbu.common.show import Show
 
 
 def _normalize_endpoint(url):
@@ -16,7 +15,7 @@ def _find_backup_endpoint(endpoints):
     return _normalize_endpoint(target['endpoints'][0]['publicURL'])
 
 
-class Connection(Show):
+class Connection(object):
     def __init__(self, username, apikey=None, password=None):
         assert apikey or password
 
