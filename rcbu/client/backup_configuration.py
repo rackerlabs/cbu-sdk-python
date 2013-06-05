@@ -4,7 +4,10 @@ import json
 import requests
 
 from rcbu.client.configuration import Configuration
-from rcbu.common.exceptions import InconsistentInclusionsError
+from rcbu.common.exceptions import (
+    InconsistentInclusionsError, DisconnectedError
+)
+from rcbu.common.show import Show
 
 
 def _parse_paths(paths):
@@ -100,11 +103,7 @@ def to_json(config):
     return json.dumps(resp)
 
 
-class DisconnectedError(Exception):
-    pass
-
-
-class BackupConfiguration(Configuration):
+class BackupConfiguration(Show):
     def __init__(self, config_id, connection=None, **kwargs):
         super(BackupConfiguration, self).__init__(config_id)
         self._inclusions = set()
@@ -152,7 +151,7 @@ class BackupConfiguration(Configuration):
 
     def _check_connection(self):
         if not self._connection:
-            raise DisconnectedError('Must self.connect before attempting.')
+            raise DisconnectedError()
 
     def _toggle(self, enabled=None):
         self._check_connection()
@@ -267,11 +266,9 @@ class BackupConfiguration(Configuration):
         The configuration ID of this instance is updated to reflect the
         new configuration that was created.
         """
-        self._check_connection()
         resp = self._create_or_update(creating=True)
         self.config_id = resp['BackupConfigurationId']
 
     def update(self):
         """Takes the local values and updates the remote config."""
-        self._check_connection()
         return self._create_or_update(creating=False)

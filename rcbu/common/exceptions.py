@@ -1,3 +1,8 @@
+class DisconnectedError(RuntimeError):
+    msg = 'Must self.connect before continuing.'
+    RuntimeError.__init__(msg)
+
+
 class OperationFailed(RuntimeError):
     def __init__(self, op, report):
         message = '{0}: {1}:{2}'.format(op, report._diagnostics, report.errors)
