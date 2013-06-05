@@ -40,7 +40,7 @@ def from_file(path, connection=None):
 
 class Agent(Show, ExposesActivities):
     def __init__(self, agent_id, connection=None, **kwargs):
-        self.agent_id = agent_id
+        self._agent_id = agent_id
         self._connection = connection
         ExposesActivities.__init__(self,
                                    self._connection.host,
@@ -49,14 +49,14 @@ class Agent(Show, ExposesActivities):
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __str__(self):
-        return '{0}:{1}'.format('Agent', self.agent_id)
+        return '{0}:{1}'.format('Agent', self._agent_id)
 
     def connect(self, connection):
         self._connection = connection
 
     @property
     def id(self):
-        return self.agent_id
+        return self._agent_id
 
     @property
     def version(self):
