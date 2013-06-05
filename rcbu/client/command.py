@@ -18,13 +18,13 @@ class Command(object):
 
     @property
     def running(self):
-        return self._state in status.BUSY_STATUS
+        return self.state in status.BUSY_STATUS
 
     def _fetch_state(self, reload=False):
         if reload:
             self._state = status.Status(self.id, self._type,
                                         self._connection).state
-        return self._state
+        return self.state
 
     @property
     def state(self):
