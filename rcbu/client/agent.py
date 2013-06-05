@@ -80,7 +80,8 @@ class Agent(Show, ExposesActivities):
                                        'backup-configuration', 'system',
                                        self.id)
         resp = self._connection.request(requests.get, url)
-        return [backup_config.from_dict(b) for b in resp.json()]
+        return [backup_config.from_dict(b, self._connection)
+                for b in resp.json()]
 
     @property
     def encrypted(self):
