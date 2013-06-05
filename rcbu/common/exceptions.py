@@ -1,6 +1,7 @@
 class DisconnectedError(RuntimeError):
-    msg = 'Must self.connect before continuing.'
-    RuntimeError.__init__(self, msg)
+    def __init__(self):
+        msg = 'Must self.connect before continuing.'
+        RuntimeError.__init__(self, msg)
 
 
 class OperationFailed(RuntimeError):
