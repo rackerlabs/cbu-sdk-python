@@ -38,3 +38,7 @@ def from_file(path, connection=None):
 class Restore(Command):
     def __init__(self, restore_id, connection, **kwargs):
         Command.__init__(self, restore_id, 'restore', connection, **kwargs)
+
+    def __repr__(self):
+        form = ('<Restore id:{0} state:{1} running:{2}>')
+        return form.format(self.id, self.state, self.running)
