@@ -20,7 +20,8 @@ def _args_from_dict(body):
             'version': body['OperatingSystemVersion']
         },
         '_encrypted': body['IsEncrypted'],
-        '_enabled': not body['IsDisabled']
+        '_enabled': not body['IsDisabled'],
+        '_online': body['Status']
     }
     return args
 
@@ -88,6 +89,19 @@ class Agent(ExposesActivities):
         resp = self._connection.request(requests.get, url)
         return [backup_config.from_dict(b, self._connection)
                 for b in resp.json()]
+
+    def _is_online(self):
+        url = '{0}/agent/{1}'.format(self._connection.host, self.id)
+        resp = self._connection.request(requests.get, url)
+        return resp.json()['Status']
+
+    @property
+    def online(self):
+        '''Lazily-loaded property. Queries the API if the status is unknown.
+        Otherwise, it returns the last known state.'''
+        if self._online == 'Unknown':
+            self._online = self._is_online()
+        return self._online == 'Online'
 
     @property
     def encrypted(self):
