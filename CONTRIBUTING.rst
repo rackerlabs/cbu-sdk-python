@@ -124,12 +124,13 @@ Goodies
 =======
 
 Make a successful contribution, and your name will be immortalized in
-the AUTHORS file! Thanks for your help. You make this project
+the `AUTHORS`_ file! Thanks for your help. You make this project
 possible.
 
 .. _httpretty: https://github.com/gabrielfalcao/HTTPretty
 .. _mock: http://www.voidspace.org.uk/python/mock/
 .. _Issues: https://github.com/rackerlabs/python-cloudbackup-sdk/issues
-.. _Milestones: https://github.com/rackerlabs/python-cloudbackup-sdk/milestones
+.. _Milestones: https://github.com/rackerlabs/python-cloudbackup-sdk/issues/milestones
 .. _flake8: https://pypi.python.org/pypi/flake8
 .. _pep20: http://www.python.org/dev/peps/pep-0020/
+.. _AUTHORS: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/AUTHORS
