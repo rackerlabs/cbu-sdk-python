@@ -49,8 +49,8 @@ class Agent(ExposesActivities):
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __repr__(self):
-        form = ('<RCBUAgent id:{0}, name:{1}, os:{2}, version:{3}, '
-                'data_center:{4}, encrypted:{5}, enabled:{6}>')
+        form = ('<Agent id:{0} name:{1} os:{2}, version:{3} '
+                'data_center:{4} encrypted:{5} enabled:{6}>')
         return form.format(self.id, self.name, self.os, self.version,
                            self.data_center, self.encrypted, self.enabled)
 
