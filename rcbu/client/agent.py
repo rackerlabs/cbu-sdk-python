@@ -47,8 +47,11 @@ class Agent(ExposesActivities):
                                    agent_id)
         [setattr(self, k, v) for k, v in kwargs.items()]
 
-    def __str__(self):
-        return '{0}:{1}'.format('Agent', self._agent_id)
+    def __repr__(self):
+        form = ('<RCBUAgent id:{0}, name:{1}, os:{2}, version:{3}, '
+                'data_center:{4}, encrypted:{5}, enabled:{6}>')
+        return form.format(self.id, self.name, self.os, self.version,
+                           self.data_center, self.encrypted, self.enabled)
 
     def connect(self, connection):
         self._connection = connection
@@ -72,6 +75,10 @@ class Agent(ExposesActivities):
     @property
     def data_center(self):
         return self._data_center
+
+    @property
+    def vault_size(self):
+        return self._vault_size
 
     @property
     def backup_configurations(self):
