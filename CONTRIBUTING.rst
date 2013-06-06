@@ -1,6 +1,6 @@
-*****************************************************
-Contributing to the Rackspace Cloud Backup Python SDK
-*****************************************************
+**********************
+Contributors, Welcome!
+**********************
 
 Come on in and contribute! The RCBU Python SDK is looking to grow, and
 it needs your help. This document is a guide to making **really**
