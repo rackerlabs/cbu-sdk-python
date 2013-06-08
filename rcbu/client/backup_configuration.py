@@ -109,6 +109,15 @@ class BackupConfiguration(object):
         [setattr(self, k, v) for k, v in kwargs.items()]
         self._connection = connection
 
+    def __repr__(self):
+        form = ('<BackupConfiguration id:{0} name:{1} agent:{2} '
+                'encrypted:{3} enabled:{4} '
+                '#inclusions:{5} #exclusions:{6}>')
+        return form.format(self.id, self.name, self.agent_id,
+                           self.encrypted, self.enabled,
+                           len(self.inclusions),
+                           len(self.exclusions))
+
     @property
     def id(self):
         return getattr(self, "_config_id", None)

@@ -1,4 +1,5 @@
 from rcbu.common.auth import authenticate
+from dateutil import parser
 
 
 def _normalize_endpoint(url):
@@ -34,8 +35,10 @@ class Connection(object):
         self._tenant = resp['access']['token']['tenant']['id']
         self._expiry = resp['access']['token']['expires']
 
-    def __str__(self):
-        return '{0}:{1}'.format('RCBU Connection', self.endpoint)
+    def __repr__(self):
+        msg = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
+        return msg.format(self.host, self.tenant,
+                          self.username, self.expires)
 
     @property
     def token(self):
@@ -60,6 +63,11 @@ class Connection(object):
     @property
     def api_version_tuple(self):
         return tuple(int(i) for i in self.api_version.split('.'))
+
+    @property
+    def expires(self):
+        date = parser.parse(self._expiry)
+        return date.strftime('%D %H:%M:%S %z')
 
     def request(self, method, url, headers=None, data=None, verify=False):
         # todo: add reauth when token is nearing expiration here

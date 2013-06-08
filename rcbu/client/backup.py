@@ -25,3 +25,7 @@ class Backup(Command):
     def __init__(self, config_id, backup_id=None, connection=None, **kwargs):
         self._config_id = config_id
         Command.__init__(self, backup_id, 'backup', connection, **kwargs)
+
+    def __repr__(self):
+        form = ('<Backup id:{0} state:{1} running:{2}>')
+        return form.format(self.id, self.state, self.running)
