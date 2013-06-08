@@ -118,10 +118,18 @@ class BackupConfiguration(object):
         return self._agent_id
 
     @property
-    def notification_settings(self):
-        return self._notify
+    def email(self):
+        return self._notify['email']
 
-    def update_notification_settings(self, email, notify_on_failure=True,
+    @property
+    def notify_on_success(self):
+        return self._notify['on_success']
+
+    @property
+    def notify_on_failure(self):
+        return self._notify['on_failure']
+
+   def update_notification_settings(self, email, notify_on_failure=True,
                                      notify_on_success=False):
         self._notify['email'] = email
         self._notify['on_failure'] = notify_on_failure
