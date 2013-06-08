@@ -26,6 +26,13 @@ class RestoreReport(report.Report):
     def __init__(self, report_id, **kwargs):
         report.Report.__init__(self, report_id, 'restore', **kwargs)
 
+    def __repr__(self):
+        form = ('<RestoreReport id:{0} state:{1} ok:{2} outcome:{3} '
+                'duration:{4} #errors:{5} bytes:{6}>')
+        return form.format(self.id, self.state, self.ok, self.outcome,
+                           self.duration, len(self.errors),
+                           self.bytes_restored)
+
     @property
     def files_restored(self):
         return self._restored['files']
