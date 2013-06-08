@@ -139,7 +139,7 @@ class BackupConfiguration(object):
     def name(self):
         return self._name
 
-    def change_name(self, name):
+    def rename(self, name):
         self._name = name
 
     @property
