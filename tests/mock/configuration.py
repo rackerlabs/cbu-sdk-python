@@ -1,3 +1,5 @@
+
+
 def backup_configuration(agent_id=1, name='mock',
                          is_active=True, is_deleted=False, is_encrypted=False,
                          retention=0, missed_backup_action=1,
@@ -5,7 +7,7 @@ def backup_configuration(agent_id=1, name='mock',
                          am_pm=None, weekday=None, interval=None,
                          timezone='Eastern Standard Time',
                          email='mock@mock.com', on_success=False,
-                         on_failure=True, inclusions=[], exclsuions=[]):
+                         on_failure=True, inclusions=[], exclusions=[]):
     return {
         'MachineAgentId': agent_id,
         'BackupConfigurationName': name,
