@@ -232,10 +232,10 @@ class BackupConfiguration(object):
         # and exclusions don't contain common items
         if are_exclusions:
             _raise_if_not_set_difference_empty(self._inclusions, data)
-            self._exclusions = data
+            self._exclusions.update(data)
         else:
             _raise_if_not_set_difference_empty(self._exclusions, data)
-            self._inclusions = data
+            self._inclusions.update(data)
 
     def reload(self):
         """Captures the latest state from the API."""
