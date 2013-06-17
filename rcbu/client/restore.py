@@ -1,4 +1,5 @@
 import json
+import requests
 
 from rcbu.client.command import Command
 
@@ -43,9 +44,8 @@ class Restore(Command):
         form = ('<Restore id:{0} state:{1} running:{2}>')
         return form.format(self.id, self.state, self.running)
 
-    def _action(starting):
-        url = '{0}/restore/{1}'.format(self._connection.host,
-                                      'action-requested')
+    def _action(self, starting):
+        url = '{0}/restore/action-requested'.format(self._connection.host)
         action = 'StartManual' if starting else 'StopManual'
         data = {'Action': action, 'Id': self.id}
         if getattr(self, '_encrypted', None):

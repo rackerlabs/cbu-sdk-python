@@ -24,14 +24,20 @@ class TestRestore(unittest.TestCase):
 
     @httprettified
     def test_start_works(self):
-        url = '{0}/restore/{2}'.format(self.connection.host,
-                                       self.id)
+        url = '{0}/restore/action-requested'.format(self.connection.host)
         HTTPretty.register_uri(HTTPretty.POST, url)
         self.cmd.start()
 
     @httprettified
+    def test_start_encrypted_works(self):
+        url = '{0}/restore/action-requested'.format(self.connection.host)
+        HTTPretty.register_uri(HTTPretty.POST, url)
+        self.cmd._encrypted = True
+        self.cmd._encrypted_password = 'taco'
+        self.cmd.start()
+
+    @httprettified
     def test_stop_works(self):
-        url = '{0}/restore/{2}'.format(self.connection.host,
-                                       self.id)
+        url = '{0}/restore/action-requested'.format(self.connection.host)
         HTTPretty.register_uri(HTTPretty.POST, url)
         self.cmd.stop()

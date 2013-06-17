@@ -24,15 +24,13 @@ class TestBackup(unittest.TestCase):
 
     @httprettified
     def test_start_works_and_sets_id(self):
-        url = '{0}/backup/{2}'.format(self.connection.host,
-                                      self.cmd._config_id)
+        url = '{0}/backup/action-requested'.format(self.connection.host)
         HTTPretty.register_uri(HTTPretty.POST, url, body=json.dumps(100))
         self.cmd.start()
         self.assertEqual(self.cmd.id, 100)
 
     @httprettified
     def test_stop_works(self):
-        url = '{0}/backup/{2}'.format(self.connection.host,
-                                      self.id)
+        url = '{0}/backup/action-requested'.format(self.connection.host)
         HTTPretty.register_uri(HTTPretty.POST, url)
         self.cmd.stop()

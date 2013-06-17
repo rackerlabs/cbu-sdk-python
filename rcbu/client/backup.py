@@ -1,3 +1,7 @@
+import json
+
+import requests
+
 from rcbu.client.command import Command
 
 
@@ -30,9 +34,8 @@ class Backup(Command):
         form = ('<Backup id:{0} state:{1} running:{2}>')
         return form.format(self.id, self.state, self.running)
 
-    def _action(starting):
-        url = '{0}/backup/{1}'.format(self._connection.host,
-                                      'action-requested')
+    def _action(self, starting):
+        url = '{0}/backup/action-requested'.format(self._connection.host)
         action = 'StartManual' if starting else 'StopManual'
         action_id = self._config_id if starting else self.id
         data = {'Action': action, 'Id': action_id}
