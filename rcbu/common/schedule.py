@@ -84,6 +84,9 @@ class Schedule(object):
         self._hour = hour
         self._minute = minute
 
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
     def __repr__(self):
         form = ('<Schedule frequency:{0} weekday:{1} time:{2}')
         time = None
@@ -111,11 +114,15 @@ class Schedule(object):
     @property
     def weekday(self):
         """Returns the day of the week this schedule uses."""
+        if not self._day_of_week:
+            return None
         return Weekdays.str(self._day_of_week)
 
     @property
     def hour(self):
         """Adjusts the hour to a 12-hour clock."""
+        if not self._hour:
+            return None
         return self._hour if self._hour < 12 else self._hour - 12
 
     @property
@@ -144,7 +151,7 @@ class Schedule(object):
             "StartTimeHour": self.hour,
             "StartTimeMinute": self.minute,
             "StartTimeAmPm": self.period,
-            "DayOfWeekId": self.day_of_week,
+            "DayOfWeekId": self.weekday,
             "HourInterval": self.interval
         }
 
@@ -194,3 +201,24 @@ def hourly(interval, minute=None):
     minute_ = randint(0, 59) if minute is None else minute
     return Schedule(ScheduleFrequency.Hourly, interval=interval,
                     day_of_week=None, hour=None, minute=minute_)
+
+def from_dict(resp):
+    freq = resp['Frequency']
+    minute = resp['StartTimeMinute']
+    hour_ = resp['StartTimeHour']
+    am_pm = resp['StartTimeAmPm']
+    hour = hour_ + 12 if am_pm == 'PM' else hour_
+    interval = resp['HourInterval']
+    weekday_id = resp['DayOfWeekId']
+
+    if freq == 'Manually':
+        return manually()
+    elif freq == 'Weekly':
+        return weekly(weekday_id, hour, minute)
+    elif freq == 'Daily':
+        return daily(hour, minute)
+    elif freq == 'Hourly':
+        return hourly(interval, minute)
+    else:
+        form = 'Invalid frequency {0}'.format(freq)
+        raise ValueError(form)
