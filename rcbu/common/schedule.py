@@ -114,6 +114,8 @@ class Schedule(object):
     @property
     def weekday(self):
         """Returns the day of the week this schedule uses."""
+        if not self._day_of_week:
+            return None
         return Weekdays.str(self._day_of_week)
 
     @property
@@ -149,7 +151,7 @@ class Schedule(object):
             "StartTimeHour": self.hour,
             "StartTimeMinute": self.minute,
             "StartTimeAmPm": self.period,
-            "DayOfWeekId": self.day_of_week,
+            "DayOfWeekId": self.weekday,
             "HourInterval": self.interval
         }
 
