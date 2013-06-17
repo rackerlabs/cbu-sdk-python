@@ -42,3 +42,21 @@ class Restore(Command):
     def __repr__(self):
         form = ('<Restore id:{0} state:{1} running:{2}>')
         return form.format(self.id, self.state, self.running)
+
+    def _action(starting):
+        url = '{0}/restore/{1}'.format(self._connection.host,
+                                      'action-requested')
+        action = 'StartManual' if starting else 'StopManual'
+        data = {'Action': action, 'Id': self.id}
+        if getattr(self, '_encrypted', None):
+            data['EncryptedPassword'] = self._encrypted_password
+        resp = self._connection.request(requests.post, url,
+                                        data=json.dumps(data))
+        self._state = 'Preparing' if starting else 'Stopped'
+        return resp
+
+    def start(self):
+        return self._action(starting=True)
+
+    def stop(self):
+        return self._action(starting=False)
