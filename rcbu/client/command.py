@@ -1,4 +1,3 @@
-import json
 import time
 
 import requests
@@ -37,36 +36,6 @@ class Command(object):
     def connect(self, connection):
         self._connection = connection
 
-    def _action_data(self, starting):
-        action = 'StartManual' if starting else 'StopManual'
-        data_dict = {'Action': action, 'Id': self._action_id(starting)}
-        if getattr(self, "._encrypted", None) and self._type == 'restore':
-            data_dict['EncryptedPassword'] = self._encrypted_password
-        return json.dumps(data_dict)
-
-    def _action_id(self, starting):
-        if starting:
-            return self._config_id if self._type == 'backup' else self.id
-        else:
-            return self.id
-
-    def _action(self, starting):
-        url = '{0}/{1}/{2}'.format(self._connection.host, self._type,
-                                   'action-requested')
-        data = self._action_data(starting)
-        resp = self._connection.request(requests.post, url, data=data)
-        self._state = 'Preparing' if starting else 'Stopped'
-        return resp
-
-    def start(self):
-        resp = self._action(starting=True)
-        if self._type == 'backup':
-            self._id = int(resp.json())
-        return resp
-
-    def stop(self):
-        return self._action(starting=False)
-
     def _report(self, body):
         return {
             'backup': lambda body: backup_report.from_dict(self.id, body),
@@ -75,8 +44,8 @@ class Command(object):
 
     @property
     def report(self):
-        url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
-                                       self._type, 'report', self.id)
+        url = '{0}/{1}/report/{2}'.format(self._connection.host,
+                                          self._type, self.id)
         resp = self._connection.request(requests.get, url)
         return self._report(resp.json())
 
