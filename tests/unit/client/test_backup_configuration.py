@@ -6,6 +6,7 @@ from httpretty import HTTPretty, httprettified
 
 from rcbu.client.connection import Connection
 from rcbu.common.constants import IDENTITY_TOKEN_URL
+import rcbu.common.schedule as schedule
 import tests.mock.auth as mock_auth
 import tests.mock.configuration as mock_config
 import rcbu.client.backup_configuration as backup_config
@@ -85,6 +86,13 @@ class TestBackupConfiguration(unittest.TestCase):
 
     def test_deleted_matches_expected(self):
         self.assertEqual(self.config.deleted, False)
+
+    def test_schedule_matches_expected(self):
+        self.assertEqual(self.config.schedule, schedule.manually())
+
+    def test_reschedule_works(self):
+        self.config.reschedule(schedule.hourly(13, 15))
+        self.assertEqual(self.config.schedule, schedule.hourly(13, 15))
 
     def test_update_notification_settings_works(self):
         self.config.update_notification_settings(email='woot',
