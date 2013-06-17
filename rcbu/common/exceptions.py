@@ -23,4 +23,4 @@ class RestoreFailed(Exception):
 class InconsistentInclusionsError(ValueError):
     def __init__(self, diff_set):
         msg_template = '{0} are included and excluded. Which did you mean?'
-        ValueError.__init__(msg_template.format(diff_set))
+        ValueError.__init__(self, msg_template.format(diff_set))
