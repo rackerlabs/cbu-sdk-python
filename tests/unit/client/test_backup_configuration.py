@@ -129,3 +129,8 @@ class TestBackupConfiguration(unittest.TestCase):
         self.assertEqual(self.config.deleted, False)
         self.config.delete()
         self.assertEqual(self.config.deleted, True)
+
+    def test_excluding_nonexistent_path_raises_error(self):
+        with self.assertRaises(FileNotFoundError):
+            self.config.exclude('not_found')
+
