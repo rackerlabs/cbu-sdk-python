@@ -3,6 +3,7 @@ import json
 
 import requests
 
+import rcbu.common.schedule as schedule
 from rcbu.common.exceptions import (
     InconsistentInclusionsError, DisconnectedError
 )
@@ -31,18 +32,9 @@ def _args_from_dict(resp):
         '_deleted': resp['IsDeleted'],
         '_encrypted': resp['IsEncrypted'],
         '_retention': resp['VersionRetention'],
-        '_schedule': {
-            'on_missed_backup': resp['MissedBackupActionId'],
-            'frequency': resp['Frequency'],
-            'start_time': {
-                'hour': resp['StartTimeHour'],
-                'minute': resp['StartTimeMinute'],
-                'am_or_pm?': resp['StartTimeAmPm']
-            },
-            'time_zone': resp['TimeZoneId'],
-            'hourly_interval': resp['HourInterval'],
-            'day_of_week': resp['DayOfWeekId']
-        },
+        '_on_missed_backup': resp['MissedBackupActionId'],
+        '_time_zone': resp['TimeZoneId'],
+        '_schedule': schedule.from_dict(resp),
         '_notify': {
             'email': resp['NotifyRecipients'],
             'on_success': resp['NotifySuccess'],
@@ -54,7 +46,7 @@ def _args_from_dict(resp):
     return args
 
 
-def _raise_if_not_set_difference_empty(lhs, rhs):
+def _raise_if_overlapping(lhs, rhs):
     diff = lhs & rhs
     if len(diff) > 0:
         raise InconsistentInclusionsError(diff)
@@ -80,29 +72,22 @@ def from_file(path, connection=None):
 
 
 def to_json(config):
-    schedule = config._schedule
-    start_time = schedule['start_time']
     notify = config._notify
 
     resp = {
-        'MachineAgentId': config._agent_id,
-        'BackupConfigurationName': config._name,
-        'IsActive': config._enabled,
+        'MachineAgentId': config.agent_id,
+        'BackupConfigurationName': config.name,
+        'IsActive': config.enabled,
         'VersionRetention': config._retention,
-        'MissedBackupActionId': schedule['on_missed_backup'],
-        'Frequency': schedule['frequency'],
-        'StartTimeHour': start_time['hour'],
-        'StartTimeMinute': start_time['minute'],
-        'StartTimeAmPm': start_time['am_or_pm?'],
-        'DayOfWeekId': schedule['day_of_week'],
-        'HourInterval': schedule['hourly_interval'],
-        'TimeZoneId': schedule['time_zone'],
-        'NotifyRecipients': notify['email'],
-        'NotifySuccess': notify['on_success'],
-        'NotifyFailure': notify['on_failure'],
+        'MissedBackupActionId': config._on_missed_backup,
+        'TimeZoneId': config._time_zone,
+        'NotifyRecipients': config.email,
+        'NotifySuccess':  config.notify_on_success,
+        'NotifyFailure': config.notify_on_failure,
         'Inclusions': _paths_to_json(config._inclusions),
         'Exclusions': _paths_to_json(config._exclusions)
     }
+    resp.update(config.schedule.to_api())
     return json.dumps(resp)
 
 
@@ -197,16 +182,7 @@ class BackupConfiguration(object):
         return self._schedule
 
     def reschedule(self, schedule):
-        self._schedule.update({
-            'frequency': schedule.frequency,
-            'start_time': {
-                'hour': schedule.hour,
-                'minute': schedule.minute,
-                'am_or_pm?': schedule.period
-            },
-            'hourly_interval': schedule.interval,
-            'day_of_week': schedule.day_of_week
-        })
+        self._schedule = schedule
 
     @property
     def inclusions(self):
@@ -238,10 +214,10 @@ class BackupConfiguration(object):
         # prevent inconsistent state by checking inclusions
         # and exclusions don't contain common items
         if are_exclusions:
-            _raise_if_not_set_difference_empty(self._inclusions, data)
+            _raise_if_overlapping(self._inclusions, data)
             self._exclusions.update(data)
         else:
-            _raise_if_not_set_difference_empty(self._exclusions, data)
+            _raise_if_overlapping(self._exclusions, data)
             self._inclusions.update(data)
 
     def reload(self):
