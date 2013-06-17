@@ -15,6 +15,9 @@ class Client(ExposesActivities):
         ExposesActivities.__init__(self, self._connection.host,
                                    self._connection.token)
 
+    def __repr__(self):
+        return '<Client>'
+
     @property
     def agents(self):
         url = self._connection.host + '/user/agents'

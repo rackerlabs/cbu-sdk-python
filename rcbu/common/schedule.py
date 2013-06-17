@@ -1,6 +1,7 @@
 from random import randint
 
 from rcbu.common.assertions import assert_bounded, assert_is_none
+from rcbu.common.weekdays import Weekdays
 
 
 class ScheduleFrequency(object):
@@ -44,7 +45,7 @@ def _validate_daily(interval, day_of_week, hour, minute):
 
 
 def _validate_hourly(interval, day_of_week, hour, minute):
-    assert_bounded('Hourly interval', 0, 23, interval)
+    assert_bounded('Hourly interval', 1, 23, interval)
     assert_is_none('Day of week', day_of_week)
     assert_is_none('Hour', hour)
     assert_bounded('Minute', 0, 59, minute)
@@ -86,6 +87,20 @@ class Schedule(object):
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
+    def __repr__(self):
+        form = ('<Schedule frequency:{0} weekday:{1} time:{2}')
+        time = None
+        if None not in (self.hour, self.minute):
+            _form = '{0:02}:{1:02} {2}'
+            time = _form.format(self.hour, self.minute, self.period)
+        else:
+            time = '*'
+        weekday = self.weekday if self._day_of_week else '*'
+        form += (' every {0} hours'.format(self.interval) if self.interval else
+                 '')
+        form += '>'
+        return form.format(self.frequency, weekday, time)
+
     @property
     def frequency(self):
         """Returns the frequency in a way that the API understand."""
@@ -97,9 +112,9 @@ class Schedule(object):
         return self._interval
 
     @property
-    def day_of_week(self):
+    def weekday(self):
         """Returns the day of the week this schedule uses."""
-        return self._day_of_week
+        return Weekdays.str(self._day_of_week)
 
     @property
     def hour(self):
