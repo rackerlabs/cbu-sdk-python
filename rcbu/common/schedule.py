@@ -202,6 +202,7 @@ def hourly(interval, minute=None):
     return Schedule(ScheduleFrequency.Hourly, interval=interval,
                     day_of_week=None, hour=None, minute=minute_)
 
+
 def from_dict(resp):
     freq = resp['Frequency']
     minute = resp['StartTimeMinute']

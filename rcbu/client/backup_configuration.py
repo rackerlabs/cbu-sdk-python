@@ -72,8 +72,6 @@ def from_file(path, connection=None):
 
 
 def to_json(config):
-    notify = config._notify
-
     resp = {
         'MachineAgentId': config.agent_id,
         'BackupConfigurationName': config.name,

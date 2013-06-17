@@ -17,7 +17,7 @@ def parse_version():
     data = None
     with open('README.rst', 'rt') as f:
         data = f.read()
-    return '.'.join(re.search(r':version: (\d)\.(\d)\.(\d)', data).groups())
+    return '.'.join(re.search(r':version: (\d+)\.(\d+)\.(\d+)', data).groups())
 
 
 setup(
