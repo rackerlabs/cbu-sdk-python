@@ -60,6 +60,11 @@ def _raise_if_not_set_difference_empty(lhs, rhs):
         raise InconsistentInclusionsError(diff)
 
 
+def _raise_if_not_exists(path):
+    if not os.path.exists(path):
+        raise IOError(path)
+
+
 def from_dict(resp, connection=None):
     args = _args_from_dict(resp)
     return BackupConfiguration(resp.get('BackupConfigurationId', 0),
@@ -227,6 +232,8 @@ class BackupConfiguration(object):
 
     def _set_paths(self, paths, are_exclusions=False):
         data = {os.path.realpath(p) for p in paths}
+        for path in data:
+            _raise_if_not_exists(path)
 
         # prevent inconsistent state by checking inclusions
         # and exclusions don't contain common items

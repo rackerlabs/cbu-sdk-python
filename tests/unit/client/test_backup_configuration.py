@@ -1,4 +1,5 @@
 import json
+import os
 import unittest
 
 from httpretty import HTTPretty, httprettified
@@ -131,6 +132,32 @@ class TestBackupConfiguration(unittest.TestCase):
         self.assertEqual(self.config.deleted, True)
 
     def test_excluding_nonexistent_path_raises_error(self):
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(IOError):
             self.config.exclude('not_found')
+
+    def test_including_nonexistent_path_raises_error(self):
+        with self.assertRaises(IOError):
+            self.config.exclude('not_found')
+
+    def test_including_duplicates_strips_dups(self):
+        name = 'setup.py'
+        self.config.include([name, name])
+        self.assertEqual(self.config.inclusions, {os.path.realpath(name)})
+
+    def test_excluding_duplicates_strips_dups(self):
+        name = 'setup.py'
+        self.config.exclude([name, name])
+        self.assertEqual(self.config.exclusions, {os.path.realpath(name)})
+
+    def test_excluding_included_files_raises_inconsistent(self):
+        name = 'setup.py'
+        self.config.include([name])
+        with self.assertRaises(InconsistentInclusionsError):
+            self.config.exclude([name])
+
+    def test_including_excluded_files_raises_inconsistent(self):
+        name = 'setup.py'
+        self.config.exclude([name])
+        with self.assertRaises(InconsistentInclusionsError):
+            self.config.include([name])
 
