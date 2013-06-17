@@ -161,3 +161,29 @@ class TestBackupConfiguration(unittest.TestCase):
         with self.assertRaises(InconsistentInclusionsError):
             self.config.include([name])
 
+    @httprettified
+    def test_reload_works(self):
+        url = '{0}/backup-configuration/{1}'.format(self.connection.host,
+                                                    self.config.id)
+        conf = mock_config.backup_configuration(agent_id=100)
+        HTTPretty.register_uri(HTTPretty.GET, url, status=200,
+                               body=json.dumps(conf))
+        self.config.reload()
+        self.assertEqual(self.config.agent_id, 100)
+
+    @httprettified
+    def test_update_works(self):
+        url = '{0}/backup-configuration/{1}'.format(self.connection.host,
+                                                    self.config.id)
+        HTTPretty.register_uri(HTTPretty.PUT, url, status=200)
+        self.assertIsNone(self.config.update())
+
+    @httprettified
+    def test_create_works(self):
+        url = '{0}/backup-configuration'.format(self.connection.host)
+        HTTPretty.register_uri(HTTPretty.POST, url, status=200,
+                               body=json.dumps({'BackupConfigurationId': 100}))
+        old_id = self.config.id
+        self.config.create()
+        self.assertEqual(self.config.id, 100)
+        self.assertNotEqual(self.config.id, old_id)
