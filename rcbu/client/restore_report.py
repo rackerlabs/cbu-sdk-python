@@ -10,7 +10,7 @@ def _args_from_dict(body):
         },
         '_destination': {
             'id': body['RestoreDestinationMachineId'],
-            'name': body['RestoreDestination']
+            'path': body['RestoreDestination']
         }
     }
     args.update(report._args_from_dict(body))
@@ -40,3 +40,11 @@ class RestoreReport(report.Report):
     @property
     def bytes_restored(self):
         return self._restored['bytes']
+
+    @property
+    def destination_path(self):
+        return self._destination['path']
+
+    @property
+    def destination_id(self):
+        return self._destination['id']
