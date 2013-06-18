@@ -29,13 +29,6 @@ def from_dict(body, connection=None):
     return Restore(body['RestoreId'], connection=connection, **args)
 
 
-def from_file(path, connection=None):
-    data = None
-    with open(path, 'rt') as f:
-        data = json.load(f)
-    return from_dict(data, connection)
-
-
 class Restore(Command):
     def __init__(self, restore_id, connection, **kwargs):
         Command.__init__(self, restore_id, 'restore', connection, **kwargs)
@@ -54,6 +47,10 @@ class Restore(Command):
                                         data=json.dumps(data))
         self._state = 'Preparing' if starting else 'Stopped'
         return resp
+
+    @property
+    def overwrite(self):
+        return self._overwrite
 
     def start(self):
         return self._action(starting=True)
