@@ -15,7 +15,7 @@ class BackupFailed(OperationFailed):
         OperationFailed.__init__(self, 'Backup', report)
 
 
-class RestoreFailed(Exception):
+class RestoreFailed(OperationFailed):
     def __init__(self, report):
         OperationFailed.__init__(self, 'Restore', report)
 
