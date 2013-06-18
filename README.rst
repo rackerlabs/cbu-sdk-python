@@ -5,7 +5,7 @@ Cloud Backup API Python SDK
     :alt: Build Status
     :target: http://sonar.drivesrvr-dev.com:9000/dashboard/index/2941
 
-:version: 0.10.5
+:version: 0.10.6
 :presentations: `Introduction`_
 
 Welcome to the Python bindings to the Rackspace Cloud Backup

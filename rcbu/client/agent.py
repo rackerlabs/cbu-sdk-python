@@ -77,8 +77,15 @@ class Agent(ExposesActivities):
     def data_center(self):
         return self._data_center
 
+    def _fetch_property(self, name):
+        url = '{0}/agent/{1}'.format(self._connection.host, self.id)
+        resp = self._connection.request(requests.get, url)
+        return resp.json()[name]
+
     @property
     def vault_size(self):
+        if self._vault_size is None:
+            self._vault_size = self._fetch_property('BackupVaultSize')
         return self._vault_size
 
     @property
@@ -90,17 +97,12 @@ class Agent(ExposesActivities):
         return [backup_config.from_dict(b, self._connection)
                 for b in resp.json()]
 
-    def _is_online(self):
-        url = '{0}/agent/{1}'.format(self._connection.host, self.id)
-        resp = self._connection.request(requests.get, url)
-        return resp.json()['Status']
-
     @property
     def online(self):
         '''Lazily-loaded property. Queries the API if the status is unknown.
         Otherwise, it returns the last known state.'''
         if self._online == 'Unknown':
-            self._online = self._is_online()
+            self._online = self._fetch_property('Status')
         return self._online == 'Online'
 
     @property
