@@ -27,6 +27,12 @@ class TestAuth(unittest.TestCase):
             auth.authenticate(apikey='bad', username='b')
 
     @httprettified
+    def test_auth_raises_if_neither_apikey_or_password_provided(self):
+        _prepare_mock_post(status=200)
+        with self.assertRaises(AssertionError):
+            auth.authenticate(username='b')
+
+    @httprettified
     def test_auth_returns_catalog_on_success(self):
         _prepare_mock_post(status=200, body='{"yay": 1}')
         catalog = auth.authenticate(username='b', password='good')
