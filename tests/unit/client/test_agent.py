@@ -72,11 +72,17 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(self.agent.vault_size, '2 GB')
 
     @httprettified
-    def test_online_matches_expected(self):
+    def test_online_fetches_from_API_if_status_unknown(self):
         url = '{0}/agent/{1}'.format(self.conn.host, self.agent.id)
         HTTPretty.register_uri(HTTPretty.GET, url, status=200,
                                body=json.dumps({'Status': 'Online'}))
         self.assertEqual(self.agent.online, True)
+
+    def test_online_returns_correct_result(self):
+        self.agent._online = 'Online'
+        self.assertTrue(self.agent.online)
+        self.agent._online = 'Offline'
+        self.assertFalse(self.agent.online)
 
     @httprettified
     def test_fetch_backup_configurations_works(self):
