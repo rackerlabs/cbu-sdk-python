@@ -1,7 +1,4 @@
 import unittest
-import json
-
-import mock
 
 import rcbu.client.restore as restore
 import tests.mock.restore as mock_restore
