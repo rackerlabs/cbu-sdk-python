@@ -12,7 +12,7 @@ class ScheduleFrequency(object):
     Daily = 3
     Hourly = 4
 
-    _to_api = {Manual: "Manual",
+    _to_api = {Manual: "Manually",
                Weekly: "Weekly",
                Daily: "Daily",
                Hourly: "Hourly",
@@ -20,7 +20,7 @@ class ScheduleFrequency(object):
 
     @classmethod
     def to_api(cls, value):
-        return ScheduleFrequency._to_api[value]
+        return ScheduleFrequency._to_api.get(value, None)
 
 
 def _validate_manual(interval, day_of_week, hour, minute):
@@ -95,7 +95,7 @@ class Schedule(object):
             time = _form.format(self.hour, self.minute, self.period)
         else:
             time = '*'
-        weekday = self.weekday if self._day_of_week else '*'
+        weekday = self.weekday if self._day_of_week is not None else '*'
         form += (' every {0} hours'.format(self.interval) if self.interval else
                  '')
         form += '>'
@@ -114,14 +114,14 @@ class Schedule(object):
     @property
     def weekday(self):
         """Returns the day of the week this schedule uses."""
-        if not self._day_of_week:
+        if self._day_of_week is None:
             return None
         return Weekdays.str(self._day_of_week)
 
     @property
     def hour(self):
         """Adjusts the hour to a 12-hour clock."""
-        if not self._hour:
+        if self._hour is None:
             return None
         return self._hour if self._hour < 12 else self._hour - 12
 
