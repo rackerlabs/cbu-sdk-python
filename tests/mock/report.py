@@ -39,7 +39,7 @@ def backup_report(agent_id=1, machine_name='mock', restorable=True,
     return base
 
 
-def restore_report(backup_id=1, files_restored=0, bytes_restored=1,
+def restore_report(backup_id=1, files_restored=0, bytes_restored=0,
                    destination=1, path='/mock', **kwargs):
     """Returns a mock restore report."""
     base = report(**kwargs)
