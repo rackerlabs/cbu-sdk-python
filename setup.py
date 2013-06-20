@@ -5,6 +5,14 @@ from setuptools import setup, find_packages
 pip_requires = os.path.join(os.getcwd(), 'tools', 'pip-requires')
 test_requires = os.path.join(os.getcwd(), 'tools', 'test-requires')
 
+def credentials():
+    install_path = os.path.join(os.path.expanduser('~'),
+                                '.pysdk')
+    if os.path.exists(os.path.join(install_path, 'credentials.conf')):
+        return ('.', ['setup.py'])  # null install
+    conf_path = os.path.join('conf', 'credentials.conf')
+    return (install_path, [conf_path])
+
 
 def file_lines(path):
     reqs = None
@@ -20,6 +28,8 @@ def parse_version():
     return '.'.join(re.search(r':version: (\d+)\.(\d+)\.(\d+)', data).groups())
 
 
+data_files = []
+data_files.append(credentials())
 setup(
     name='rackspace-backup-client',
     version=parse_version(),
@@ -27,10 +37,11 @@ setup(
     author_email='alejandro.cabrera@rackspace.com',
     description='A Python client for the Rackspace Cloud Backup API.',
     long_description=open('README.rst').read(),
-    url='https://github.com/racker/python-cloudbackup-client',
+    url='https://github.com/rackerlabs/python-cloudbackup-sdk',
     packages=find_packages(),
     zip_safe=False,
     install_requires=file_lines(pip_requires),
     include_package_data=True,
-    classifiers=file_lines('docs/CLASSIFIERS')
+    classifiers=file_lines('docs/CLASSIFIERS'),
+    data_files=data_files
 )
