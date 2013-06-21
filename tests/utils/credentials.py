@@ -17,15 +17,17 @@ def _parse_config():
     creds = config['credentials']
     return (creds.get('username', None),
             creds.get('apikey', None),
-            creds.get('email', None))
+            creds.get('email', None),
+            creds.get('tenant', None))
 
 
 class Credentials(object):
     def __init__(self):
-        name, key, email = _parse_config()
+        name, key, email, tenant = _parse_config()
         self._name = name
         self._key = key
         self._email = email
+        self._tenant = tenant
 
     @property
     def name(self):
@@ -38,3 +40,7 @@ class Credentials(object):
     @property
     def email(self):
         return self._email
+
+    @property
+    def tenant(self):
+        return self._tenant
