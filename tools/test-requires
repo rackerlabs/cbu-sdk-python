@@ -4,3 +4,6 @@ testtools
 coverage
 git+https://github.com/gabrielfalcao/HTTPretty.git
 mock
+pytz
+spec
+configparser
