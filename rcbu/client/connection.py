@@ -38,7 +38,8 @@ class Connection(object):
     def __repr__(self):
         msg = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
         return msg.format(self.host, self.tenant,
-                          self.username, self.expires)
+                          self.username,
+                          self.expires.strftime('%D %H:%M:%S %z'))
 
     @property
     def token(self):
@@ -67,7 +68,7 @@ class Connection(object):
     @property
     def expires(self):
         date = parser.parse(self._expiry)
-        return date.strftime('%D %H:%M:%S %z')
+        return date
 
     def request(self, method, url, headers=None, data=None, verify=False):
         # todo: add reauth when token is nearing expiration here
