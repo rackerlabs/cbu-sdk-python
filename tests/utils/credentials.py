@@ -10,7 +10,7 @@ def _parse_config():
     config = configparser.ConfigParser()
     try:
         config.read(path)
-    except configparser.ParsingError as e:
+    except configparser.ParsingError:
         form = 'Did you remember to install/fill in {0}?'
         print(form.format(path), file=sys.stderr)
 
