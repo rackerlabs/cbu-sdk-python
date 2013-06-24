@@ -1,4 +1,5 @@
 import rcbu.client.report as report
+from rcbu.utils.bytes import dehumanize_bytes
 
 
 def _args_from_dict(body):
@@ -44,7 +45,7 @@ class BackupReport(report.Report):
 
     @property
     def bytes_searched(self):
-        return self._searched['bytes']
+        return dehumanize_bytes(self._searched['bytes'])
 
     @property
     def files_stored(self):
@@ -52,4 +53,4 @@ class BackupReport(report.Report):
 
     @property
     def bytes_stored(self):
-        return self._backup['bytes']
+        return dehumanize_bytes(self._backup['bytes'])

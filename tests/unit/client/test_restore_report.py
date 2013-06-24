@@ -26,7 +26,7 @@ class TestRestoreReport(unittest.TestCase):
 
     def test_restored_matches_expected(self):
         self.assertEqual(self.report.files_restored, 0)
-        self.assertEqual(self.report.bytes_restored, 0)
+        self.assertEqual(self.report.bytes_restored, 2 * 2**30)
 
     def test_destination_matches_expected(self):
         self.assertEqual(self.report.destination_path, '/mock')
