@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 import rcbu.client.backup_report as backup_report
@@ -31,10 +32,12 @@ class TestBackupReport(unittest.TestCase):
         self.assertEqual(self.report.diagnostics, 'OK')
 
     def test_started_matches_expected(self):
-        self.assertEqual(self.report.started, '\/Date(1351118760000)\/')
+        expect = datetime.datetime.fromtimestamp(1351118760)
+        self.assertEqual(self.report.started, expect)
 
     def test_ended_matches_expected(self):
-        self.assertEqual(self.report.ended, '\/Date(1351118760001)\/')
+        expect = datetime.datetime.fromtimestamp(1351118760)
+        self.assertEqual(self.report.ended, expect)
 
     def test_duration_matches_expected(self):
         self.assertEqual(self.report.duration, '00:00:00')
