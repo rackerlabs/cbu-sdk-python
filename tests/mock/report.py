@@ -2,8 +2,8 @@
 
 
 def report(config_id=1, name='mock', state='Completed',
-           start='\/Date(1351118760000)\/',
-           end='\/Date(1351118760001)\/',
+           start='/Date(1351118760000)/',
+           end='/Date(1351118760001)/',
            duration='00:00:00', errors=None,
            outcome='OK', diagnostics='OK'):
     """Base mock report."""
