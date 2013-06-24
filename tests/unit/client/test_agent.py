@@ -70,7 +70,7 @@ class TestAgent(unittest.TestCase):
         self.assertEqual(self.agent.enabled, True)
 
     def test_vault_size_matches_expected(self):
-        self.assertEqual(self.agent.vault_size, '2 GB')
+        self.assertEqual(self.agent.vault_size, 2 * 2 ** 30)
 
     @httprettified
     def test_online_fetches_from_API_if_status_unknown(self):
@@ -84,7 +84,7 @@ class TestAgent(unittest.TestCase):
         url = '{0}/agent/{1}'.format(self.conn.host, self.agent.id)
         HTTPretty.register_uri(HTTPretty.GET, url, status=200,
                                body=json.dumps({'BackupVaultSize': '2 GB'}))
-        self.assertEqual(self.agent.vault_size, '2 GB')
+        self.assertEqual(self.agent.vault_size, 2 * 2**30)
 
     def test_online_returns_correct_result(self):
         self.agent._online = 'Online'

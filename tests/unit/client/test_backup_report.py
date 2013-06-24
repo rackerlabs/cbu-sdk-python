@@ -52,8 +52,8 @@ class TestBackupReport(unittest.TestCase):
 
     def test_searched_matches_expected(self):
         self.assertEqual(self.report.files_searched, 0)
-        self.assertEqual(self.report.bytes_searched, 0)
+        self.assertEqual(self.report.bytes_searched, 2 * 2**30)
 
     def test_stored_matches_expected(self):
         self.assertEqual(self.report.files_stored, 0)
-        self.assertEqual(self.report.bytes_stored, 0)
+        self.assertEqual(self.report.bytes_stored, 2 * 2**30)

@@ -1,4 +1,5 @@
 import rcbu.client.report as report
+from rcbu.utils.bytes import dehumanize_bytes
 
 
 def _args_from_dict(body):
@@ -39,7 +40,7 @@ class RestoreReport(report.Report):
 
     @property
     def bytes_restored(self):
-        return self._restored['bytes']
+        return dehumanize_bytes(self._restored['bytes'])
 
     @property
     def destination_path(self):

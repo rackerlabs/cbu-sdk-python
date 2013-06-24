@@ -22,8 +22,8 @@ def report(config_id=1, name='mock', state='Completed',
 
 
 def backup_report(agent_id=1, machine_name='mock', restorable=True,
-                  files_searched=0, bytes_searched=0,
-                  files_stored=0, bytes_stored=0,
+                  files_searched=0, bytes_searched='2 GB',
+                  files_stored=0, bytes_stored='2 GB',
                   **kwargs):
     """Returns a mock backup report."""
     base = report(**kwargs)
@@ -39,7 +39,7 @@ def backup_report(agent_id=1, machine_name='mock', restorable=True,
     return base
 
 
-def restore_report(backup_id=1, files_restored=0, bytes_restored=0,
+def restore_report(backup_id=1, files_restored=0, bytes_restored='2 GB',
                    destination=1, path='/mock', **kwargs):
     """Returns a mock restore report."""
     base = report(**kwargs)
