@@ -1,8 +1,11 @@
+import binascii
 import json
+import os
 
 import requests
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_v1_5
 
-from rcbu.common.constants import ENCRYPT_KEY_URL
 from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
 
@@ -109,15 +112,28 @@ class Agent(ExposesActivities):
     def encrypted(self):
         return self._encrypted
 
-    def encrypt(self, encrypted_key_hex):
-        if not len(encrypted_key_hex) == 512:
-            raise ValueError("key should be 512 bytes long: see "
-                             "{} for more details".format(ENCRYPT_KEY_URL))
+    def _public_key_path(self):
+        name = 'public-key.pem'
+        if os.name != 'nt':
+            return os.path.join('/etc/driveclient', name)
+        else:
+            return os.path.join(os.path.expandvars('%appdata%'),
+                                'Local', 'Driveclient', name)
 
+    def encrypt(self, password):
+        public_key_path = self._public_key_path()
+        public_key = None
+        with open(public_key_path) as f:
+            public_key = f.read()
+
+        pkey = RSA.importKey(public_key)
+        cipher = PKCS1_v1_5.new(pkey)
+        encrypted_password = cipher.encrypt(password)
+        hex_pass = binascii.hexlify(encrypted_password).decode()
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'encrypt')
         data = json.dumps({
             'MachineAgentId': self.id,
-            'EncryptedPasswordHex': encrypted_key_hex
+            'EncryptedPasswordHex': hex_pass,
         })
         self._connection.request(requests.post, url, data=data)
         self._encrypted = True

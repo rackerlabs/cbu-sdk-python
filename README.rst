@@ -62,6 +62,11 @@ Check out the `backup_config.json`_
 Install
 =======
 
+Make sure you have libgmp, libssl, and the Python development headers installed::
+
+    sudo apt-get install libgmp-dev libssl-dev python-dev
+    sudo apt-get install libgmp-dev libssl-dev python3-dev  # for Py3
+
 .. code-block:: bash
 
     pip install git+https://github.com/rackerlabs/python-cloudbackup-sdk
