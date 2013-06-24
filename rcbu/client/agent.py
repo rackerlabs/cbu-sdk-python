@@ -6,7 +6,6 @@ import requests
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 
-from rcbu.common.constants import ENCRYPT_KEY_URL
 from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
 

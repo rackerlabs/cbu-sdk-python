@@ -122,8 +122,7 @@ class TestAgent(unittest.TestCase):
                         '__builtin__.open')
         with mock.patch(open_fn_name, m, create=True):
             with mock.patch('Crypto.PublicKey.RSA.importKey') as key:
-                key_return = key.return_value
-                key_return = 'woot'
+                key.return_value = 'woot'
                 with mock.patch('Crypto.Cipher.PKCS1_v1_5.new') as cipher:
                     cipher.return_value = mock.MagicMock()
                     cipher.return_value.encrypt.return_value = b'awesome'
