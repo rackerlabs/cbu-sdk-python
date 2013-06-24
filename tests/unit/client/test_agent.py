@@ -10,6 +10,7 @@ from rcbu.client.client import Client
 from rcbu.common.auth import IDENTITY_TOKEN_URL
 import tests.mock.auth as mock_auth
 import tests.mock.agent as agent_mock
+import tests.mock.rsa as mock_rsa
 import tests.mock.configuration as mock_config
 import rcbu.client.agent as agent
 
@@ -109,12 +110,25 @@ class TestAgent(unittest.TestCase):
         HTTPretty.register_uri(HTTPretty.POST,
                                url, status=204)
         self.assertEqual(self.agent.encrypted, False)
-        self.agent.encrypt('1' * 512)
-        self.assertEqual(self.agent.encrypted, True)
 
-    def test_encrypt_throws_value_error_if_key_too_short(self):
-        with self.assertRaises(ValueError):
-            self.agent.encrypt('1' * 511)  # 1 shorter than expected
+        # This is some vicious mocking. In order:
+        # 1. Mock the built-in open so we read in a mock PEM
+        # 2. Mock PyCrypto's importKey so we avoid reading from /dev/urandom
+        # 3. Mock PyCrypto's Cipher generator so we avoid randgen
+        # 4. Mock PyCrypto's Cipher.encrypt since its already a mock
+        # 5. Ensure the call can complete and the agent is encrypted
+        m = mock.mock_open(read_data=mock_rsa.public_key())
+        open_fn_name = ('builtins.open' if sys.version_info[0] == 3 else
+                        '__builtin__.open')
+        with mock.patch(open_fn_name, m, create=True):
+            with mock.patch('Crypto.PublicKey.RSA.importKey') as key:
+                key.return_value = 'woot'
+                with mock.patch('Crypto.Cipher.PKCS1_v1_5.new') as cipher:
+                    cipher.return_value = mock.MagicMock()
+                    cipher.return_value.encrypt.return_value = b'awesome'
+                    self.agent.encrypt('sweet_tacos')
+
+        self.assertEqual(self.agent.encrypted, True)
 
     @httprettified
     def _toggle_test(self, enabled=True):
