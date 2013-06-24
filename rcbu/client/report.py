@@ -1,3 +1,5 @@
+import datetime
+
 import rcbu.common.exceptions as exceptions
 
 
@@ -54,13 +56,17 @@ class Report(object):
     def diagnostics(self):
         return self._diagnostics
 
+    def _parse_date(self, variant):
+        timestamp = int(self._time[variant][6:16])
+        return datetime.datetime.fromtimestamp(timestamp)
+
     @property
     def started(self):
-        return self._time['start']
+        return self._parse_date('start')
 
     @property
     def ended(self):
-        return self._time['end']
+        return self._parse_date('start')
 
     @property
     def duration(self):
