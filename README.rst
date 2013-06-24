@@ -34,17 +34,18 @@ I'll let the code speak for ease of use:
 
 .. code-block:: python
 
-    from rcbu.client.client import Connection
+    from rcbu.client.client import Client
+    from rcbu.client.connection import Connection
     import rcbu.client.backup_configuration as backup_config
 
     conn = Connection('username', apikey='981263y1hq82yh8y9q38q2')
-    myconf = backup_config.from_file('backup_config.json')
-    myconf.connect(conn)
+    client = Client(conn)
+    myconf = backup_config.from_file('backup_config.json', conn)
 
     # Upload a new backup configuration to the Backup API
     myconf.create()
 
-    backup = conn.create_backup(myconf)
+    backup = client.create_backup(myconf)
     status = backup.start()
 
     # block here until the backup completes
