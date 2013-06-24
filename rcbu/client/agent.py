@@ -8,6 +8,7 @@ from Crypto.Cipher import PKCS1_v1_5
 
 from rcbu.common.activity_mixin import ExposesActivities
 import rcbu.client.backup_configuration as backup_config
+from rcbu.utils.bytes import dehumanize_bytes
 
 
 def _args_from_dict(body):
@@ -89,7 +90,7 @@ class Agent(ExposesActivities):
     def vault_size(self):
         if self._vault_size is None:
             self._vault_size = self._fetch_property('BackupVaultSize')
-        return self._vault_size
+        return dehumanize_bytes(self._vault_size)
 
     @property
     def backup_configurations(self):
