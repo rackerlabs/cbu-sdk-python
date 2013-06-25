@@ -31,8 +31,9 @@ class TestActivityMixin(unittest.TestCase):
                                body=json.dumps(activities))
         result = getattr(self.agent, method)
         self.assertEqual(len(result), xcount)
-        [self.assertEqual(i.type, xtype) for i in result]
-        [self.assertEqual(i.state, xstatus) for i in result]
+        for a in result:
+            self.assertEqual(a.type, xtype)
+            self.assertEqual(a.state, xstatus)
 
     @httprettified
     def _busy_test(self, xbusy, count=5):
