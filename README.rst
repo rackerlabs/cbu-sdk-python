@@ -84,7 +84,7 @@ Some simple guidelines:
 * >95% code coverage - keep it strong
 * Be `Pythonic`_
 
-For more details, checkout the `Contibuting`_ guide.
+For more details, checkout the `Contributing`_ guide.
 
 If you have any questions, please check in with Alejandro Cabrera
 <alejandro.cabrera@rackspace.com>.
