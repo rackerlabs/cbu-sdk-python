@@ -47,5 +47,6 @@ class TestActivity(unittest.TestCase):
     def test_repr_matches_expected(self):
         actual_form = repr(self.activity)
         expected_form = ('<BackupActivity id:1 name:mock state:Completed'
-                         ' time:{0}')
-        self.assertEqual(form, expected_form.format(self.activity.time))
+                         ' time:{0}>')
+        self.assertEqual(actual_form,
+                         expected_form.format(self.activity.time.isoformat()))
