@@ -42,10 +42,10 @@ class TestActivityMixin(unittest.TestCase):
                                state='Completed')
                       for i in range(count)]
         extra_jobs_status = 'Complete' if not xbusy else 'InProgress'
-        activities.extend([activity(activity_id=i,
-                                    type_tag='Backup',
-                                    state=extra_jobs_status)
-                           for i in range(count)])
+        activities.extend(activity(activity_id=i,
+                                   type_tag='Backup',
+                                   state=extra_jobs_status)
+                          for i in range(count))
         HTTPretty.register_uri(HTTPretty.GET, self.url,
                                body=json.dumps(activities))
         self.assertEqual(self.agent.busy, xbusy)
