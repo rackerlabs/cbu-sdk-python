@@ -76,13 +76,15 @@ Make sure you have libgmp, libssl, and the Python development headers installed:
 Contributing
 ============
 
-Some simple guides:
+Some simple guidelines:
 
 * Unit tests for new features
 * Keep the code clean - flake8
 * Be wary of warnings and errors - pylint
 * >95% code coverage - keep it strong
 * Be `Pythonic`_
+
+For more details, checkout the `Contibuting`_ guide.
 
 If you have any questions, please check in with Alejandro Cabrera
 <alejandro.cabrera@rackspace.com>.
@@ -91,3 +93,4 @@ If you have any questions, please check in with Alejandro Cabrera
 .. _backup_config.json: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/examples/create_a_backup/backup_config.json
 .. _ipython: http://ipython.org/
 .. _Introduction: https://one.rackspace.com/download/attachments/21615636/python-sdk.pdf
+.. _Contributing: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/CONTRIBUTING.rst
