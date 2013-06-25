@@ -66,7 +66,7 @@ class Report(object):
 
     @property
     def ended(self):
-        return self._parse_date('start')
+        return self._parse_date('end')
 
     @property
     def duration(self):
