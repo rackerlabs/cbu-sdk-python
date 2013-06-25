@@ -4,7 +4,7 @@ import unittest
 from httpretty import HTTPretty, httprettified
 
 import rcbu.common.activity_mixin as activities
-from tests.mock.job import job
+from tests.mock.activity import activity
 
 HOST = 'https://tacobackup.com'
 KEY = '1234'
@@ -23,21 +23,31 @@ class TestActivityMixin(unittest.TestCase):
 
     @httprettified
     def _activity_test(self, method, xtype, xstatus, xcount):
-        jobs = [job(xtype, xstatus) for i in range(xcount)]
+        activities = [activity(activity_id=i,
+                               type_tag=xtype,
+                               state=xstatus)
+                      for i in range(xcount)]
         HTTPretty.register_uri(HTTPretty.GET, self.url,
-                               body=json.dumps(jobs))
+                               body=json.dumps(activities))
         result = getattr(self.agent, method)
         self.assertEqual(len(result), xcount)
-        [self.assertEqual(i['Type'], xtype) for i in result]
-        [self.assertEqual(i['CurrentState'], xstatus) for i in result]
+        for a in result:
+            self.assertEqual(a.type, xtype)
+            self.assertEqual(a.state, xstatus)
 
     @httprettified
     def _busy_test(self, xbusy, count=5):
-        jobs = [job('Restore', 'Complete') for i in range(count)]
+        activities = [activity(activity_id=i,
+                               type_tag='Restore',
+                               state='Completed')
+                      for i in range(count)]
         extra_jobs_status = 'Complete' if not xbusy else 'InProgress'
-        jobs.extend([job('Backup', extra_jobs_status) for i in range(count)])
+        activities.extend(activity(activity_id=i,
+                                   type_tag='Backup',
+                                   state=extra_jobs_status)
+                          for i in range(count))
         HTTPretty.register_uri(HTTPretty.GET, self.url,
-                               body=json.dumps(jobs))
+                               body=json.dumps(activities))
         self.assertEqual(self.agent.busy, xbusy)
 
     def test_backup_history_returns_expected(self):

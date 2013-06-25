@@ -1,6 +1,5 @@
-import datetime
-
 import rcbu.common.exceptions as exceptions
+import rcbu.utils.date as date
 
 
 def _args_from_dict(body):
@@ -56,17 +55,13 @@ class Report(object):
     def diagnostics(self):
         return self._diagnostics
 
-    def _parse_date(self, variant):
-        timestamp = int(self._time[variant][6:16])
-        return datetime.datetime.fromtimestamp(timestamp)
-
     @property
     def started(self):
-        return self._parse_date('start')
+        return date.parse(self._time['start'])
 
     @property
     def ended(self):
-        return self._parse_date('end')
+        return date.parse(self._time['end'])
 
     @property
     def duration(self):
