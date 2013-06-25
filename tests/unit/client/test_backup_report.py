@@ -32,11 +32,11 @@ class TestBackupReport(unittest.TestCase):
         self.assertEqual(self.report.diagnostics, 'OK')
 
     def test_started_matches_expected(self):
-        expect = datetime.datetime.fromtimestamp(1351118760)
+        expect = datetime.datetime.fromtimestamp(1351118760.000)
         self.assertEqual(self.report.started, expect)
 
     def test_ended_matches_expected(self):
-        expect = datetime.datetime.fromtimestamp(1351118760)
+        expect = datetime.datetime.fromtimestamp(1351118760.001)
         self.assertEqual(self.report.ended, expect)
 
     def test_duration_matches_expected(self):

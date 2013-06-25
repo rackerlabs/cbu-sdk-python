@@ -1,6 +1,7 @@
 import requests
 
 import rcbu.common.status as status
+import rcbu.common.activity as activity
 
 
 _predicates = {
@@ -22,7 +23,7 @@ def _jobs(host, key, predicate, agent_id=None):
     headers = {'x-auth-token': key}
     resp = requests.get(url, headers=headers, verify=False)
     resp.raise_for_status()
-    return [b for b in resp.json() if predicate(b)]
+    return [activity.from_dict(b) for b in resp.json() if predicate(b)]
 
 
 def _any_running(host, key, agent_id=None):
