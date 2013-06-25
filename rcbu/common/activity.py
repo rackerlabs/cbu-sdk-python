@@ -1,4 +1,4 @@
-import datetime
+import rcbu.utils.date as date
 
 
 def _args_from_dict(body):
@@ -74,5 +74,4 @@ class Activity(object):
 
     @property
     def time(self):
-        timestamp = int(self._time[6:16])
-        return datetime.datetime.fromtimestamp(timestamp)
+        return date.parse(self._time)
