@@ -75,7 +75,7 @@ class Connection(object):
         headers_ = {
             'x-auth-token': self.token,
             'content-type': 'application/json',
-            'user-agent': 'rackspace-backup-client'
+            'user-agent': 'python-cloudbackup-sdk'
         }
 
         if headers:
