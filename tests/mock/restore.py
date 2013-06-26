@@ -1,14 +1,14 @@
 """Mocking restore objects."""
 
 
-def restore(restore_id=1, backup_id=1, overwrite=False,
+def restore(restore_id=1, backup_id=1, overwrites=False,
             backup_config_id=1, backup_config_name='mock',
             src_id=1, src_name='mock', dest_id=1, dest_name='mock',
             dest_path='/mock', encrypted=False, password='mock'):
     return {
         'RestoreId': restore_id,
         'BackupId': backup_id,
-        'OverwriteFiles': overwrite,
+        'OverwriteFiles': overwrites,
         'BackupConfigurationId': backup_config_id,
         'BackupConfigurationName': backup_config_name,
         'BackupMachineId': src_id,

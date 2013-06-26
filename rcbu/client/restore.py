@@ -7,7 +7,7 @@ from rcbu.client.command import Command
 def _args_from_dict(body):
     return {
         '_backup_id': body['BackupId'],
-        '_overwrite': body['OverwriteFiles'],
+        '_overwrites': body['OverwriteFiles'],
         '_backup_config_id': body['BackupConfigurationId'],
         '_backup_config_name': body['BackupConfigurationName'],
         '_source_machine_id': body['BackupMachineId'],
@@ -49,8 +49,8 @@ class Restore(Command):
         return resp
 
     @property
-    def overwrite(self):
-        return self._overwrite
+    def overwrites(self):
+        return self._overwrites
 
     def start(self):
         return self._action(starting=True)
