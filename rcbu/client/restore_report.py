@@ -43,9 +43,7 @@ class RestoreReport(report.Report):
         return dehumanize_bytes(self._restored['bytes'])
 
     @property
-    def destination_path(self):
-        return self._destination['path']
-
-    @property
-    def destination_id(self):
-        return self._destination['id']
+    def destination(self):
+        """Returns a string in the form: 'path id'"""
+        return '{0} {1}'.format(self._destination['path'],
+                                self._destination['id'])
