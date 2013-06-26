@@ -68,6 +68,11 @@ Make sure you have libgmp, libssl, and the Python development headers installed:
     sudo apt-get install libgmp-dev libssl-dev python-dev
     sudo apt-get install libgmp-dev libssl-dev python3-dev  # for Py3
 
+On Windows, make sure that the proper Visual Studio path is configured::
+
+    SET VS90COMNTOOLS=%VS100COMNTOOLS%  # MSVS 2010
+    SET VS90COMNTOOLS=%VS110COMNTOOLS%  # MSVS 2012
+
 .. code-block:: bash
 
     pip install git+https://github.com/rackerlabs/python-cloudbackup-sdk
