@@ -7,8 +7,10 @@ import rcbu.common.activity as activity
 _predicates = {
     "backup_history": lambda j: j['Type'] == 'Backup' and not _is_running(j),
     "restore_history": lambda j: j['Type'] == 'Restore' and not _is_running(j),
+    "cleanup_history": lambda j: j['Type'] == 'Cleanup' and not _is_running(j),
     "active_backups": lambda j: j['Type'] == 'Backup' and _is_running(j),
     "active_restores": lambda j: j['Type'] == 'Restore' and _is_running(j),
+    "active_cleanups": lambda j: j['Type'] == 'Cleanup' and _is_running(j),
     "active": lambda j: _is_running(j)
 }
 
@@ -47,6 +49,11 @@ class ExposesActivities(object):
                      _predicates['restore_history'], self._id)
 
     @property
+    def cleanup_history(self):
+        return _jobs(self._host, self._key,
+                     _predicates['cleanup_history'], self._id)
+
+    @property
     def active_backups(self):
         return _jobs(self._host, self._key,
                      _predicates['active_backups'], self._id)
@@ -55,6 +62,11 @@ class ExposesActivities(object):
     def active_restores(self):
         return _jobs(self._host, self._key,
                      _predicates['active_restores'], self._id)
+
+    @property
+    def active_cleanups(self):
+        return _jobs(self._host, self._key,
+                     _predicates['active_cleanups'], self._id)
 
     @property
     def busy(self):
