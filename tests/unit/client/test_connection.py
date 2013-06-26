@@ -3,6 +3,7 @@ import unittest
 
 from httpretty import HTTPretty, httprettified
 from requests.exceptions import HTTPError
+from dateutil import parser
 
 from rcbu.client.connection import Connection
 from rcbu.client.client import Client
@@ -44,6 +45,13 @@ class TestValidConnection(unittest.TestCase):
         with self.assertRaises(HTTPError):
             self.client.backup_configurations
 
+    def test_repr_matches_expected(self):
+        form = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
+        self.assertEqual(repr(self.conn),
+                         form.format(self.conn.host, self.conn.tenant,
+                                     self.conn.username,
+                                     self.conn.expires.isoformat()))
+
     def test_host(self):
         self.assertEqual(self.conn.host, MOCK_ENDPOINT_STRIPPED)
 
@@ -52,3 +60,10 @@ class TestValidConnection(unittest.TestCase):
 
     def test_version_tuple(self):
         self.assertEqual(self.conn.api_version_tuple, (1, 0))
+
+    def test_tenant_matches_expected(self):
+        self.assertEqual(self.conn.tenant, 111111)
+
+    def test_expires_matches_expected(self):
+        self.assertEqual(self.conn.expires,
+                         parser.parse(self.conn._expiry))
