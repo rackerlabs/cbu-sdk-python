@@ -39,7 +39,7 @@ class Connection(object):
         msg = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
         return msg.format(self.host, self.tenant,
                           self.username,
-                          self.expires.strftime('%D %H:%M:%S %z'))
+                          self.expires.isoformat())
 
     @property
     def token(self):
