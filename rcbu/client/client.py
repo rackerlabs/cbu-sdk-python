@@ -77,3 +77,9 @@ class Client(ExposesActivities):
         restore_action = restore.from_dict(resp.json(),
                                            connection=self._connection)
         return restore_action
+
+    def get_restore(self, restore_id):
+        url = '{0}/restore/{1}'.format(self._connection.host, restore_id)
+        resp = self._connection.request(requests.get, url)
+        restore_action = restore.from_dict(resp.json(), self._connection)
+        return restore_action
