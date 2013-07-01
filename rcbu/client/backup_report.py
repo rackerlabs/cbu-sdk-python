@@ -8,11 +8,11 @@ def _args_from_dict(body):
         '_machine_name': body['ComputerName'],
         '_restorable': body['CanRestore'],
         '_searched': {
-            'files': body['FilesSearched'],
+            'files': int(body['FilesSearched']),
             'bytes': body['BytesSearched']
         },
         '_backup': {
-            'files': body['FilesBackedUp'],
+            'files': int(body['FilesBackedUp']),
             'bytes': body['BytesBackedUp']
         }
     }
