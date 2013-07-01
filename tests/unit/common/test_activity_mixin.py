@@ -68,6 +68,12 @@ class TestActivityMixin(unittest.TestCase):
     def test_active_cleanups_returns_expected(self):
         self._activity_test('active_cleanups', 'Cleanup', 'InProgress', 5)
 
+    def test_active_returns_expected(self):
+        self._activity_test('active', 'Cleanup', 'InProgress', 5)
+
+    def test_history_returns_expected(self):
+        self._activity_test('history', 'Restore', 'Completed', 5)
+
     def test_busy_returns_true_when_there_are_running_jobs(self):
         self._busy_test(True)
 
