@@ -1,4 +1,5 @@
 import rcbu.common.exceptions as exceptions
+import rcbu.common.duration as duration
 import rcbu.utils.date as date
 
 
@@ -65,7 +66,7 @@ class Report(object):
 
     @property
     def duration(self):
-        return self._time['duration']
+        return duration.seconds(self._time['duration'])
 
     def raise_if_not_ok(self):
         if not self.ok:
