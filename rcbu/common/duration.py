@@ -5,7 +5,7 @@ def seconds(time):
     '''Given %H:%M:%S -> seconds. Hours can be arbitrarily large.'''
     try:
         hours, minutes, seconds = [int(f) for f in time.split(':')]
-    except ValueError as e:
+    except ValueError:
         msg = 'expecting format %H:%M:%S, not {0}'.format(time)
         raise ValueError(msg)
 
