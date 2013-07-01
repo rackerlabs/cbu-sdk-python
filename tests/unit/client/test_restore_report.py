@@ -16,7 +16,7 @@ class TestRestoreReport(unittest.TestCase):
         self.assertEqual(repr(self.report),
                          form.format(self.report.id, self.report.state,
                                      self.report.ok, self.report.outcome,
-                                     self.report.duration,
+                                     '0:00:00',
                                      len(self.report.errors),
                                      self.report.bytes_restored))
 

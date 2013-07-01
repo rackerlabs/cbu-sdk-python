@@ -12,6 +12,15 @@ class TestBackupReport(unittest.TestCase):
                                          restorable=True)
         self.report = backup_report.from_dict(1, mock)
 
+    def test_repr_matches_expected(self):
+        form = ('<BackupReport id:{0} state:{1} ok:{2} outcome:{3} '
+                'duration:{4} #errors:{5} bytes:{6}>')
+        form = form.format(self.report.id, self.report.state, self.report.ok,
+                           self.report.outcome, '0:00:00',
+                           len(self.report.errors),
+                           self.report.bytes_stored)
+        self.assertEqual(repr(self.report), form)
+
     def test_id_matches_expected(self):
         self.assertEqual(self.report.id, 1)
 
@@ -40,7 +49,7 @@ class TestBackupReport(unittest.TestCase):
         self.assertEqual(self.report.ended, expect)
 
     def test_duration_matches_expected(self):
-        self.assertEqual(self.report.duration, '00:00:00')
+        self.assertEqual(self.report.duration, 0)
 
     def test_does_not_raise_if_ok(self):
         self.report.raise_if_not_ok()
