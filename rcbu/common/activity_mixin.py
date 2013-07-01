@@ -11,7 +11,8 @@ _predicates = {
     "active_backups": lambda j: j['Type'] == 'Backup' and _is_running(j),
     "active_restores": lambda j: j['Type'] == 'Restore' and _is_running(j),
     "active_cleanups": lambda j: j['Type'] == 'Cleanup' and _is_running(j),
-    "active": lambda j: _is_running(j)
+    "active": lambda j: _is_running(j),
+    "not_active": lambda j: not _is_running(j)
 }
 
 
@@ -67,6 +68,16 @@ class ExposesActivities(object):
     def active_cleanups(self):
         return _jobs(self._host, self._key,
                      _predicates['active_cleanups'], self._id)
+
+    @property
+    def active(self):
+        return _jobs(self._host, self._key, _predicates['active'],
+                     self._id)
+
+    @property
+    def history(self):
+        return _jobs(self._host, self._key, _predicates['not_active'],
+                     self._id)
 
     @property
     def busy(self):

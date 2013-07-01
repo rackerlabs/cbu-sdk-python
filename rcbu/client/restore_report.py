@@ -6,7 +6,7 @@ def _args_from_dict(body):
     args = {
         '_backup_id': body['BackupConfigurationId'],
         '_restored': {
-            'files': body['NumFilesRestored'],
+            'files': int(body['NumFilesRestored']),
             'bytes': body['NumBytesRestored']
         },
         '_destination': {
