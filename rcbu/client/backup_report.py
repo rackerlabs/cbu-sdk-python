@@ -31,12 +31,13 @@ class BackupReport(report.Report):
         report.Report.__init__(self, report_id, 'backup', **kwargs)
 
     def __repr__(self):
-        form = ('<BackupReport id:{0} state:{1} ok:{2} outcome:{3} '
-                'duration:{4} #errors:{5} bytes:{6}>')
+        form = ('<BackupReport id:{0} state:{1} ok:{2} '
+                'started:{3} duration:{4} #errors:{5} bytes:{6}>')
         hours, minutes, seconds = duration.tuple(self.duration)
         pretty_duration = '{0}:{1:02}:{2:02}'.format(hours, minutes, seconds)
-        return form.format(self.id, self.state, self.ok, self.outcome,
-                           pretty_duration, len(self.errors),
+        return form.format(self.id, self.state, self.ok,
+                           self.started.isoformat(), pretty_duration,
+                           len(self.errors),
                            self.bytes_stored)
 
     @property
