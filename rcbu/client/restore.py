@@ -1,7 +1,7 @@
 import json
-import requests
 
 from rcbu.client.command import Command
+from rcbu.common.http import Http
 
 
 def _args_from_dict(body):
@@ -43,7 +43,7 @@ class Restore(Command):
         data = {'Action': action, 'Id': self.id}
         if getattr(self, '_encrypted', None):
             data['EncryptedPassword'] = self._encrypted_password
-        resp = self._connection.request(requests.post, url,
+        resp = self._connection.request(Http.post, url,
                                         data=json.dumps(data))
         self._state = 'Preparing' if starting else 'Stopped'
         return resp

@@ -1,11 +1,10 @@
 import time
 
-import requests
-
 from rcbu.utils.perf import Timer
 import rcbu.client.backup_report as backup_report
 import rcbu.client.restore_report as restore_report
 import rcbu.common.status as status
+from rcbu.common.http import Http
 
 
 class Command(object):
@@ -46,7 +45,7 @@ class Command(object):
     def report(self):
         url = '{0}/{1}/report/{2}'.format(self._connection.host,
                                           self._type, self.id)
-        resp = self._connection.request(requests.get, url)
+        resp = self._connection.request(Http.get, url)
         return self._report(resp.json())
 
     def _is_done(self):

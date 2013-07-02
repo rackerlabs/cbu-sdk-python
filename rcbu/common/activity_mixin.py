@@ -1,7 +1,6 @@
-import requests
-
 import rcbu.common.status as status
 import rcbu.common.activity as activity
+from rcbu.common.http import Http
 
 
 _predicates = {
@@ -20,65 +19,58 @@ def _is_running(job):
     return status.busy(job['CurrentState'])
 
 
-def _jobs(host, key, predicate, agent_id=None):
-    url = ('{0}/activity'.format(host) if agent_id is None else
-           '{0}/system/activity/{1}'.format(host, agent_id))
-    headers = {'x-auth-token': key}
-    resp = requests.get(url, headers=headers, verify=False)
+def _jobs(connection, predicate, agent_id=None):
+    url = ('{0}/activity'.format(connection.host) if agent_id is None else
+           '{0}/system/activity/{1}'.format(connection.host, agent_id))
+    resp = connection.request(Http.get, url, verify=False)
     resp.raise_for_status()
     return [activity.from_dict(b) for b in resp.json() if predicate(b)]
 
 
-def _any_running(host, key, agent_id=None):
-    return len(_jobs(host, key, _predicates['active'], agent_id)) > 0
+def _any_running(connection, agent_id=None):
+    return len(_jobs(connection, _predicates['active'], agent_id)) > 0
 
 
 class ExposesActivities(object):
-    def __init__(self, host, key, oid=None):
-        self._host = host
-        self._key = key
+    def __init__(self, connection, oid=None):
+        self._connection = connection
         self._id = oid
+
+    def _listing(self, predicate):
+        return _jobs(self._connection, predicate, self._id)
 
     @property
     def backup_history(self):
-        return _jobs(self._host, self._key,
-                     _predicates['backup_history'], self._id)
+        return self._listing(_predicates['backup_history'])
 
     @property
     def restore_history(self):
-        return _jobs(self._host, self._key,
-                     _predicates['restore_history'], self._id)
+        return self._listing(_predicates['restore_history'])
 
     @property
     def cleanup_history(self):
-        return _jobs(self._host, self._key,
-                     _predicates['cleanup_history'], self._id)
+        return self._listing(_predicates['cleanup_history'])
 
     @property
     def active_backups(self):
-        return _jobs(self._host, self._key,
-                     _predicates['active_backups'], self._id)
+        return self._listing(_predicates['active_backups'])
 
     @property
     def active_restores(self):
-        return _jobs(self._host, self._key,
-                     _predicates['active_restores'], self._id)
+        return self._listing(_predicates['active_restores'])
 
     @property
     def active_cleanups(self):
-        return _jobs(self._host, self._key,
-                     _predicates['active_cleanups'], self._id)
+        return self._listing(_predicates['active_cleanups'])
 
     @property
     def active(self):
-        return _jobs(self._host, self._key, _predicates['active'],
-                     self._id)
+        return self._listing(_predicates['active'])
 
     @property
     def history(self):
-        return _jobs(self._host, self._key, _predicates['not_active'],
-                     self._id)
+        return self._listing(_predicates['not_active'])
 
     @property
     def busy(self):
-        return _any_running(self._host, self._key, self._id)
+        return _any_running(self._connection, self._id)
