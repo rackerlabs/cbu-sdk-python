@@ -29,10 +29,11 @@ class RestoreReport(report.Report):
         report.Report.__init__(self, report_id, 'restore', **kwargs)
 
     def __repr__(self):
-        form = ('<RestoreReport id:{0} state:{1} ok:{2} outcome:{3} '
+        form = ('<RestoreReport id:{0} state:{1} ok:{2} started:{3} '
                 'duration:{4} #errors:{5} bytes:{6}>')
         hours, minutes, seconds = duration.tuple(self.duration)
-        return form.format(self.id, self.state, self.ok, self.outcome,
+        return form.format(self.id, self.state, self.ok,
+                           self.started.isoformat(),
                            '{0}:{1:02}:{2:02}'.format(hours, minutes, seconds),
                            len(self.errors), self.bytes_restored)
 

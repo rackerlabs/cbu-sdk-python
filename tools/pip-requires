@@ -1,3 +1,4 @@
 python-dateutil
 requests==1.2.0
 pycrypto
+flufl.enum

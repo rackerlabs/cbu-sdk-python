@@ -11,12 +11,12 @@ class TestRestoreReport(unittest.TestCase):
         self.report = restore_report.from_dict(1, mock)
 
     def test_repr_matches_expected(self):
-        form = ('<RestoreReport id:{0} state:{1} ok:{2} outcome:{3} '
+        form = ('<RestoreReport id:{0} state:{1} ok:{2} started:{3} '
                 'duration:{4} #errors:{5} bytes:{6}>')
         self.assertEqual(repr(self.report),
                          form.format(self.report.id, self.report.state,
-                                     self.report.ok, self.report.outcome,
-                                     '0:00:00',
+                                     self.report.ok,
+                                     self.report.started.isoformat(), '0:00:00',
                                      len(self.report.errors),
                                      self.report.bytes_restored))
 
