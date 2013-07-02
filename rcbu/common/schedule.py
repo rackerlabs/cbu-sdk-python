@@ -48,7 +48,7 @@ def _validate_hourly(interval, day_of_week, hour, minute):
     assert_bounded('Hourly interval', 1, 23, interval)
     assert_is_none('Day of week', day_of_week)
     assert_is_none('Hour', hour)
-    assert_bounded('Minute', 0, 59, minute)
+    assert_is_none('Minute', minute)
 
 
 # encode the validation process as a dictionary of valid schedule frequencies
@@ -190,7 +190,7 @@ def daily(hour=None, minute=None):
                     day_of_week=None, hour=hour_, minute=minute_)
 
 
-def hourly(interval, minute=None):
+def hourly(interval):
     """Returns a schedule appropriate for establishing an hourly backup.
 
     args:
@@ -198,9 +198,8 @@ def hourly(interval, minute=None):
                 this backup run? [0 - 23]
       minute: On what minute should this backup run? [0 - 59]
     """
-    minute_ = randint(0, 59) if minute is None else minute
     return Schedule(ScheduleFrequency.Hourly, interval=interval,
-                    day_of_week=None, hour=None, minute=minute_)
+                    day_of_week=None, hour=None, minute=None)
 
 
 def from_dict(resp):
