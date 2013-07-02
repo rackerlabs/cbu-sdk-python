@@ -1,12 +1,11 @@
 import os
 import json
 
-import requests
-
 import rcbu.common.schedule as schedule
 from rcbu.common.exceptions import (
     InconsistentInclusionsError, DisconnectedError
 )
+from rcbu.common.http import Http
 
 
 def _parse_paths(paths):
@@ -162,7 +161,7 @@ class BackupConfiguration(object):
                                        'backup-configuration',
                                        'enable', self.id)
         msg = json.dumps({'Enable': True if enabled else False})
-        resp = self._connection.request(requests.post, url, data=msg)
+        resp = self._connection.request(Http.post, url, data=msg)
         assert resp.json()['IsActive'] == enabled
         self._enabled = enabled
 
@@ -181,7 +180,7 @@ class BackupConfiguration(object):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    'backup-configuration',
                                    self.id)
-        self._connection.request(requests.delete, url)
+        self._connection.request(Http.delete, url)
         self._deleted = True
 
     @property
@@ -233,7 +232,7 @@ class BackupConfiguration(object):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    'backup-configuration',
                                    self.id)
-        resp = self._connection.request(requests.get, url)
+        resp = self._connection.request(Http.get, url)
         parsed = resp.json()
         args = _args_from_dict(parsed)
         [setattr(self, k, v) for k, v in args.items()]
@@ -246,12 +245,12 @@ class BackupConfiguration(object):
         if creating:
             url = '{0}/{1}'.format(self._connection.host,
                                    'backup-configuration')
-            method = requests.post
+            method = Http.post
         else:
             url = '{0}/{1}/{2}'.format(self._connection.host,
                                        'backup-configuration',
                                        self.id)
-            method = requests.put
+            method = Http.put
 
         data = to_json(self)
         resp = self._connection.request(method, url, data=data)

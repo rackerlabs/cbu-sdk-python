@@ -1,5 +1,8 @@
 from rcbu.common.auth import authenticate
+import rcbu.common.http as http
 from dateutil import parser
+
+import requests
 
 
 def _normalize_endpoint(url):
@@ -34,6 +37,7 @@ class Connection(object):
         self._username = username
         self._tenant = resp['access']['token']['tenant']['id']
         self._expiry = resp['access']['token']['expires']
+        self._session = requests
 
     def __repr__(self):
         msg = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
@@ -71,15 +75,16 @@ class Connection(object):
         return date
 
     def request(self, method, url, headers=None, data=None, verify=False):
+        '''Method is an http.Http enum, such as http.Http.get.'''
         # todo: add reauth when token is nearing expiration here
         headers_ = {
             'x-auth-token': self.token,
             'content-type': 'application/json',
             'user-agent': 'python-cloudbackup-sdk'
         }
-
         if headers:
             headers_.update(headers)
-        resp = method(url, headers=headers_, data=data, verify=verify)
+        call = getattr(self._session, http.enum_to_method(method))
+        resp = call(url, headers=headers_, data=data, verify=verify)
         resp.raise_for_status()
         return resp
