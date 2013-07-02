@@ -2,7 +2,7 @@ import binascii
 import json
 import os
 
-import requests
+from rcbu.common.http import Http
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 
@@ -46,10 +46,7 @@ class Agent(ExposesActivities):
     def __init__(self, agent_id, connection=None, **kwargs):
         self._agent_id = agent_id
         self._connection = connection
-        ExposesActivities.__init__(self,
-                                   self._connection.host,
-                                   self._connection.token,
-                                   agent_id)
+        ExposesActivities.__init__(self, connection, agent_id)
         [setattr(self, k, v) for k, v in kwargs.items()]
 
     def __repr__(self):
@@ -83,7 +80,7 @@ class Agent(ExposesActivities):
 
     def _fetch_property(self, name):
         url = '{0}/agent/{1}'.format(self._connection.host, self.id)
-        resp = self._connection.request(requests.get, url)
+        resp = self._connection.request(Http.get, url)
         return resp.json()[name]
 
     @property
@@ -97,7 +94,7 @@ class Agent(ExposesActivities):
         url = '{0}/{1}/{2}/{3}'.format(self._connection.host,
                                        'backup-configuration', 'system',
                                        self.id)
-        resp = self._connection.request(requests.get, url)
+        resp = self._connection.request(Http.get, url)
         return [backup_config.from_dict(b, self._connection)
                 for b in resp.json()]
 
@@ -136,7 +133,7 @@ class Agent(ExposesActivities):
             'MachineAgentId': self.id,
             'EncryptedPasswordHex': hex_pass,
         })
-        self._connection.request(requests.post, url, data=data)
+        self._connection.request(Http.post, url, data=data)
         self._encrypted = True
 
     @property
@@ -149,7 +146,7 @@ class Agent(ExposesActivities):
             'MachineAgentId': self.id,
             'Enable': enabled
         })
-        self._connection.request(requests.post, url, data=data)
+        self._connection.request(Http.post, url, data=data)
         self._enabled = enabled
 
     def enable(self):
@@ -161,4 +158,4 @@ class Agent(ExposesActivities):
     def delete(self):
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent', 'delete')
         data = json.dumps({'MachineAgentId': self.id})
-        self._connection.request(requests.post, url, data=data)
+        self._connection.request(Http.post, url, data=data)

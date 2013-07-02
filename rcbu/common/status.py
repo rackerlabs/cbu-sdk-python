@@ -1,4 +1,4 @@
-import requests
+from rcbu.common.http import Http
 
 
 int_to_status = lambda n: {
@@ -44,5 +44,5 @@ class Status(object):
     def state(self):
         url = '{0}/{1}/{2}'.format(self._connection.host,
                                    self._type, self.id)
-        resp = self._connection.request(requests.get, url)
+        resp = self._connection.request(Http.get, url)
         return _state_interpret[self._type](resp)

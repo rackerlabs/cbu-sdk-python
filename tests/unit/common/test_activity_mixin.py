@@ -4,22 +4,29 @@ import unittest
 from httpretty import HTTPretty, httprettified
 
 import rcbu.common.activity_mixin as activities
+from rcbu.client.connection import Connection
+from rcbu.common.constants import IDENTITY_TOKEN_URL
 from tests.mock.activity import activity
+from tests.mock.auth import authenticate
 
-HOST = 'https://tacobackup.com'
-KEY = '1234'
 AGENT_ID = 1
 
 
 class Mock(activities.ExposesActivities):
-    def __init__(self, host, key, oid):
-        activities.ExposesActivities.__init__(self, host, key, oid)
+    def __init__(self, connection, oid):
+        activities.ExposesActivities.__init__(self, connection, oid)
 
 
 class TestActivityMixin(unittest.TestCase):
+    @httprettified
     def setUp(self):
-        self.agent = Mock(HOST, KEY, AGENT_ID)
-        self.url = '{0}/system/activity/{1}'.format(HOST, AGENT_ID)
+        reply = authenticate()
+        HTTPretty.register_uri(HTTPretty.POST, IDENTITY_TOKEN_URL,
+                               status=200, body=json.dumps(reply))
+        self.connection = Connection('a', 'b')
+        self.agent = Mock(self.connection, AGENT_ID)
+        self.url = '{0}/system/activity/{1}'.format(self.connection.host,
+                                                    AGENT_ID)
 
     @httprettified
     def _activity_test(self, method, xtype, xstatus, xcount):

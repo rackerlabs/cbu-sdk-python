@@ -1,8 +1,7 @@
 import json
 
-import requests
-
 from rcbu.client.command import Command
+from rcbu.common.http import Http
 
 
 def _args_from_dict(body):
@@ -39,7 +38,7 @@ class Backup(Command):
         action = 'StartManual' if starting else 'StopManual'
         action_id = self._config_id if starting else self.id
         data = {'Action': action, 'Id': action_id}
-        resp = self._connection.request(requests.post, url,
+        resp = self._connection.request(Http.post, url,
                                         data=json.dumps(data))
         self._state = 'Preparing' if starting else 'Stopped'
         return resp
