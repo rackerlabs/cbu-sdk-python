@@ -151,7 +151,7 @@ class Schedule(object):
             "StartTimeHour": self.hour,
             "StartTimeMinute": self.minute,
             "StartTimeAmPm": self.period,
-            "DayOfWeekId": self.weekday,
+            "DayOfWeekId": self._day_of_week,
             "HourInterval": self.interval
         }
 
