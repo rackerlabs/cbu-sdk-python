@@ -74,6 +74,41 @@ class TestBackupConfiguration(unittest.TestCase):
     def test_can_reschedule_to_weekly(self):
         self._reschedule_test(schedule.weekly(0, hour=1, minute=1))
 
+    def test_can_add_inclusions(self):
+        os.mkdir('b')
+        self.backup_config.include(['b'])
+        self.backup_config.update()
+        self.assertEqual(self.backup_config.inclusions,
+                         {os.path.realpath(p) for p in ['a', 'b']})
+        shutil.rmtree('b')
+
+    def test_can_add_exclusions(self):
+        os.mkdir('b')
+        excl_paths = [os.path.join('b', str(i)) for i in range(10)]
+        for p in excl_paths:
+            with open(p, 'wb') as f:
+                f.write(b'1')
+        self.backup_config.include(['b'])
+        self.backup_config.exclude(excl_paths)
+        self.backup_config.update()
+        self.assertEqual(self.backup_config.inclusions,
+                         {os.path.realpath(p) for p in ['a', 'b']})
+        self.assertEqual(self.backup_config.exclusions,
+                         {os.path.realpath(p) for p in excl_paths})
+        shutil.rmtree('b')
+
+    def test_delete_works(self):
+        config = mock_config.backup_configuration(
+            name='deleter', email=self.email,
+            agent_id=187801
+        )
+        conf = backup_config.from_dict(config, self.connection)
+        conf.include(['a'])
+        conf.create()
+        conf.delete()
+        conf.reload()
+        self.assertEqual(conf.deleted, True)
+
     def tearDown(self):
         self.backup_config.delete()
 
