@@ -25,7 +25,8 @@ class TestActivityMixin(unittest.TestCase):
                                status=200, body=json.dumps(reply))
         self.connection = Connection('a', 'b')
         self.agent = Mock(self.connection, AGENT_ID)
-        self.url = '{0}/system/activity/{1}'.format(self.connection.host, AGENT_ID)
+        self.url = '{0}/system/activity/{1}'.format(self.connection.host,
+                                                    AGENT_ID)
 
     @httprettified
     def _activity_test(self, method, xtype, xstatus, xcount):
