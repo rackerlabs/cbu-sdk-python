@@ -4,4 +4,4 @@ nose
 nose-progressive
 pytz
 spec
-git+https://github.com/gabrielfalcao/HTTPretty.git
+httpretty==0.6.1
