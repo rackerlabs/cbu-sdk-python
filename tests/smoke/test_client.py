@@ -37,13 +37,13 @@ class TestClientBasic(unittest.TestCase):
         backups = self.client.active_backups
         self.assertGreaterEqual(len(backups), 0)
         for backup in backups:
-            self.assertEqual(backup['Type'], 'Backup')
+            self.assertEqual(backup.type, 'Backup')
 
     def test_client_can_fetch_active_restores(self):
         restores = self.client.active_restores
         self.assertGreaterEqual(len(restores), 0)
         for restore in restores:
-            self.assertEqual(restore['Type'], 'Restore')
+            self.assertEqual(restore.type, 'Restore')
 
     def test_client_busy_returns_true_or_false(self):
         self.assertIn(self.client.busy, [True, False])
