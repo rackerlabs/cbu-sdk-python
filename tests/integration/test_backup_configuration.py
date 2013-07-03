@@ -10,17 +10,7 @@ import rcbu.common.schedule as schedule
 import rcbu.client.backup_configuration as backup_config
 import tests.mock.configuration as mock_config
 from tests.utils.credentials import Credentials
-
-
-def agent_id():
-    expander = os.path.expandvars
-    joiner = os.path.join
-    path = ('/etc/driveclient/bootstrap.json' if os.name != 'nt' else
-            joiner(expander('%programdata%'), 'driveclient', 'bootstrap.json'))
-    agent_conf = None
-    with open(path, 'rt') as f:
-        agent_conf = json.load(f)
-    return agent_conf['AgentId']
+from tests.utils.agent import Agent
 
 
 class TestBackupConfiguration(unittest.TestCase):
@@ -29,15 +19,17 @@ class TestBackupConfiguration(unittest.TestCase):
         cls.creds = Credentials()
         cls.connection = Connection(cls.creds.name, apikey=cls.creds.key)
         cls.email = cls.creds.email
+        cls.agent = Agent()
         os.mkdir('a')
 
     def setUp(self):
         self.connection = TestBackupConfiguration.connection
         self.client = Client(self.connection)
         self.email = TestBackupConfiguration.email
+        self.agent = TestBackupConfiguration.agent
         config = mock_config.backup_configuration(
             name='integration', email=self.email,
-            agent_id=agent_id()
+            agent_id=self.agent.id
         )
         self.backup_config = backup_config.from_dict(config, self.connection)
         self.backup_config.include(['a'])
@@ -112,7 +104,7 @@ class TestBackupConfiguration(unittest.TestCase):
     def test_delete_works(self):
         config = mock_config.backup_configuration(
             name='deleter', email=self.email,
-            agent_id=agent_id()
+            agent_id=self.agent.id
         )
         conf = backup_config.from_dict(config, self.connection)
         conf.include(['a'])
