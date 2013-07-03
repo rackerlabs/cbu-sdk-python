@@ -218,7 +218,7 @@ def from_dict(resp):
     elif freq == 'Daily':
         return daily(hour, minute)
     elif freq == 'Hourly':
-        return hourly(interval, minute)
+        return hourly(interval)
     else:
         form = 'Invalid frequency {0}'.format(freq)
         raise ValueError(form)

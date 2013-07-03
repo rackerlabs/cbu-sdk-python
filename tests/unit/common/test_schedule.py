@@ -36,8 +36,8 @@ class TestSchedule(unittest.TestCase):
                      xhour=1, xminute=1, xperiod='AM')
 
     def test_hourly_schedule_works(self):
-        sched = schedule.hourly(2, 1)
-        self._expect(sched, 'Hourly', xinterval=2, xminute=1)
+        sched = schedule.hourly(2)
+        self._expect(sched, 'Hourly', xinterval=2)
 
     def test_load_manual_schedule_works(self):
         mock = mock_schedule.schedule(schedule.ScheduleFrequency.Manual)
@@ -60,10 +60,10 @@ class TestSchedule(unittest.TestCase):
 
     def test_load_hourly_schedule_works(self):
         mock = mock_schedule.schedule(schedule.ScheduleFrequency.Hourly,
-                                      interval=4, minute=0)
+                                      interval=4)
         sched = schedule.from_dict(mock)
         self._expect(sched, 'Hourly',
-                     xinterval=4, xminute=0)
+                     xinterval=4)
 
     def test_load_unknown_schedule_raises(self):
         mock = mock_schedule.schedule(8)
@@ -88,7 +88,7 @@ class TestSchedule(unittest.TestCase):
                           'time:01:15 PM>'))
 
     def test_hourly_repr_matches_expected(self):
-        sched = schedule.hourly(12, 15)
+        sched = schedule.hourly(12)
         self.assertEqual(repr(sched),
                          ('<Schedule frequency:Hourly weekday:* '
                           'time:* every 12 hours>'))
