@@ -91,8 +91,8 @@ class TestBackupConfiguration(unittest.TestCase):
         self.assertEqual(self.config.schedule, schedule.manually())
 
     def test_reschedule_works(self):
-        self.config.reschedule(schedule.hourly(13, 15))
-        self.assertEqual(self.config.schedule, schedule.hourly(13, 15))
+        self.config.reschedule(schedule.hourly(13))
+        self.assertEqual(self.config.schedule, schedule.hourly(13))
 
     def test_update_notification_settings_works(self):
         self.config.update_notification_settings(email='woot',
