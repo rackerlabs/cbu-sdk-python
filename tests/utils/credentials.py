@@ -1,24 +1,22 @@
-from __future__ import print_function
-import configparser
+import json
 import os
-import sys
 
 
 def _parse_config():
     path = os.path.join(os.path.expanduser('~'),
-                        '.pysdk', 'credentials.conf')
-    config = configparser.ConfigParser()
+                        '.pysdk', 'credentials.json')
+    data = None
     try:
-        config.read(path)
-    except configparser.ParsingError:
-        form = 'Did you remember to install/fill in {0}?'
-        print(form.format(path), file=sys.stderr)
+        with open(path) as f:
+            data = json.load(f)
+    except IOError:
+        form = 'Did you remember to install {0}?'
+        raise RuntimeError(form.format(path))
 
-    creds = config['credentials']
-    return (creds.get('username', None),
-            creds.get('apikey', None),
-            creds.get('email', None),
-            creds.get('tenant', None))
+    return (data.get('username', None),
+            data.get('apikey', None),
+            data.get('email', None),
+            data.get('tenant', None))
 
 
 class Credentials(object):

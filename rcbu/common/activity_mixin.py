@@ -24,11 +24,15 @@ def _jobs(connection, predicate, agent_id=None):
            '{0}/system/activity/{1}'.format(connection.host, agent_id))
     resp = connection.request(Http.get, url, verify=False)
     resp.raise_for_status()
-    return [activity.from_dict(b) for b in resp.json() if predicate(b)]
+    return (activity.from_dict(b) for b in resp.json() if predicate(b))
 
 
 def _any_running(connection, agent_id=None):
-    return len(_jobs(connection, _predicates['active'], agent_id)) > 0
+    try:
+        next(_jobs(connection, _predicates['active'], agent_id))
+    except StopIteration:
+        return False
+    return True
 
 
 class ExposesActivities(object):
