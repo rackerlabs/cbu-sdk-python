@@ -20,15 +20,15 @@ class Client(ExposesActivities):
     def agents(self):
         url = self._connection.host + '/user/agents'
         resp = self._connection.request(Http.get, url)
-        return [agent.from_dict(a, connection=self._connection)
-                for a in resp.json()]
+        return (agent.from_dict(a, connection=self._connection)
+                for a in resp.json())
 
     @property
     def backup_configurations(self):
         url = self._connection.host + '/backup-configuration'
         resp = self._connection.request(Http.get, url)
         body = resp.json()
-        return [backup_config.from_dict(config, self) for config in body]
+        return (backup_config.from_dict(config, self) for config in body)
 
     def get_agent(self, agent_id):
         url = '{0}/{1}/{2}'.format(self._connection.host, 'agent',

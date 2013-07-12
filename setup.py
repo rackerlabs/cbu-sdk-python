@@ -8,9 +8,9 @@ test_requires = os.path.join(os.getcwd(), 'tools', 'test-requires')
 def credentials():
     install_path = os.path.join(os.path.expanduser('~'),
                                 '.pysdk')
-    if os.path.exists(os.path.join(install_path, 'credentials.conf')):
+    if os.path.exists(os.path.join(install_path, 'credentials.json')):
         return ('.', ['setup.py'])  # null install
-    conf_path = os.path.join('conf', 'credentials.conf')
+    conf_path = os.path.join('conf', 'credentials.json')
     return (install_path, [conf_path])
 
 

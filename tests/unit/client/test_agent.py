@@ -99,7 +99,7 @@ class TestAgent(unittest.TestCase):
         data = json.dumps([mock_config.backup_configuration()
                            for i in range(10)])
         HTTPretty.register_uri(HTTPretty.GET, url, status=200, body=data)
-        confs = self.agent.backup_configurations
+        confs = list(self.agent.backup_configurations)
         self.assertEqual(len(confs), 10)
         for conf in confs:
             self.assertEqual(conf.name, 'mock')
