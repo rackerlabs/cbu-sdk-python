@@ -36,7 +36,7 @@ class TestActivityMixin(unittest.TestCase):
                       for i in range(xcount)]
         HTTPretty.register_uri(HTTPretty.GET, self.url,
                                body=json.dumps(activities))
-        result = getattr(self.agent, method)
+        result = list(getattr(self.agent, method))
         self.assertEqual(len(result), xcount)
         for a in result:
             self.assertEqual(a.type, xtype)

@@ -17,30 +17,30 @@ class TestClientBasic(unittest.TestCase):
         self.client = TestClientBasic.client
 
     def test_has_agents(self):
-        agents = self.client.agents
+        agents = list(self.client.agents)
         self.assertGreater(len(agents), 0)
 
     def test_get_agent_by_id(self):
-        agent = self.client.agents[-1]
+        agent = list(self.client.agents)[-1]
         agent2 = self.client.get_agent(agent.id)
         self.assertEqual(agent.id, agent2.id)
 
     def test_client_can_fetch_backup_history(self):
-        backups = self.client.backup_history
+        backups = list(self.client.backup_history)
         self.assertGreaterEqual(len(backups), 0)
 
     def test_client_can_fetch_restore_history(self):
-        restores = self.client.restore_history
+        restores = list(self.client.restore_history)
         self.assertGreaterEqual(len(restores), 0)
 
     def test_client_can_fetch_active_backups(self):
-        backups = self.client.active_backups
+        backups = list(self.client.active_backups)
         self.assertGreaterEqual(len(backups), 0)
         for backup in backups:
             self.assertEqual(backup.type, 'Backup')
 
     def test_client_can_fetch_active_restores(self):
-        restores = self.client.active_restores
+        restores = list(self.client.active_restores)
         self.assertGreaterEqual(len(restores), 0)
         for restore in restores:
             self.assertEqual(restore.type, 'Restore')

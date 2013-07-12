@@ -95,8 +95,8 @@ class Agent(ExposesActivities):
                                        'backup-configuration', 'system',
                                        self.id)
         resp = self._connection.request(Http.get, url)
-        return [backup_config.from_dict(b, self._connection)
-                for b in resp.json()]
+        return (backup_config.from_dict(b, self._connection)
+                for b in resp.json())
 
     @property
     def online(self):
