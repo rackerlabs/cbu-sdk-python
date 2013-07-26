@@ -5,7 +5,7 @@ Cloud Backup API Python SDK
 :Int. tests: .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk-integration-linux/badge/icon
 :Unit tests: .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk/badge/icon
 :Smoke tests: .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk-smoke/badge/icon
-:version: 0.17.0
+:version: 0.17.1
 :Presentations: `Introduction`_
 
 Welcome to the Python bindings to the Rackspace Cloud Backup
