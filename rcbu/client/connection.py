@@ -74,7 +74,7 @@ class Connection(object):
         date = parser.parse(self._expiry)
         return date
 
-    def request(self, method, url, headers=None, data=None, verify=False):
+    def request(self, method, url, headers=None, data=None, verify=True):
         '''Method is an http.Http enum, such as http.Http.get.'''
         # todo: add reauth when token is nearing expiration here
         headers_ = {
