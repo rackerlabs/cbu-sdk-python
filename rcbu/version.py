@@ -1,2 +1,2 @@
-version_tuple = (0, 17, 1)
+version_tuple = (0, 17, 2)
 version = '.'.join([str(k) for k in version_tuple])
