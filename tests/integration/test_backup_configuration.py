@@ -3,6 +3,8 @@ import os
 import shutil
 import unittest
 
+import requests
+
 from rcbu.client.connection import Connection
 from rcbu.client.client import Client
 import rcbu.common.schedule as schedule
@@ -109,7 +111,8 @@ class TestBackupConfiguration(unittest.TestCase):
         conf.include(['a'])
         conf.create()
         conf.delete()
-        conf.reload()
+        with self.assertRaises(requests.exceptions.HTTPError):
+            conf.reload()
         self.assertEqual(conf.deleted, True)
 
     def tearDown(self):
