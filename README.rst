@@ -2,9 +2,6 @@
 Cloud Backup API Python SDK
 ***************************
 
-:Int. tests: .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk-integration-linux/badge/icon
-:Unit tests: .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk/badge/icon
-:Smoke tests: .. image:: https://jenkins.drivesrvr-dev.com/job/python-cloudbackup-sdk-smoke/badge/icon
 :version: 0.17.2
 :Presentations: `Introduction`_
 
