@@ -34,6 +34,8 @@ setup(
     name='rackspace-backup-client',
     version=parse_version(),
     author='Alejandro Cabrera',
+    license='Apache License (2.0)',
+    keywords='rackspace, Cloud Backup, client',
     author_email='alejandro.cabrera@rackspace.com',
     description='A Python client for the Rackspace Cloud Backup API.',
     long_description=open('README.rst').read(),
@@ -42,6 +44,16 @@ setup(
     zip_safe=False,
     install_requires=file_lines(pip_requires),
     include_package_data=True,
-    classifiers=file_lines('docs/CLASSIFIERS'),
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: Apache Software License',
+        'Environment :: Console',
+        'Operating System :: OS Independent',
+        'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: Implementation :: CPython'
+    ],
     data_files=data_files
 )
