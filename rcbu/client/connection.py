@@ -1,8 +1,10 @@
-from rcbu.common.auth import authenticate
-import rcbu.common.http as http
-from dateutil import parser
+from rcbu.common import auth
+from rcbu.common import exceptions
+from rcbu.common import http
 
+from dateutil import parser
 import requests
+import six
 
 
 def _normalize_endpoint(url):
@@ -10,30 +12,63 @@ def _normalize_endpoint(url):
     return url[:idx]
 
 
-def _find_backup_endpoint(endpoints):
-    target = None
-    for entry in endpoints:
-        if entry['type'] == 'rax:backup':
-            target = entry
-            break
-    return _normalize_endpoint(target['endpoints'][0]['publicURL'])
+def _find_given_region(target, region):
+    region_matcher = lambda x: x['region'] == region.upper()
+    try:
+        return next(six.moves.filter(region_matcher,
+                                     target['endpoints']))
+    except StopIteration:
+        return None
+
+
+def _find_generic_endpoint(target):
+    regionless_matcher = lambda x: u'region' not in x
+    try:
+        return next(six.moves.filter(regionless_matcher,
+                                     target['endpoints']))
+    except StopIteration:
+        return None
+
+
+def _find_backup_endpoint(catalogue, region):
+    backup_matcher = lambda x: x['type'] == u'rax:backup'
+    target = next(six.moves.filter(backup_matcher, catalogue))
+
+    # NOTE(cabrera): attempt to grab a region-specific endpoint. If
+    # this fails, then either the region provided was not valid or
+    # there are no region-specific endpoints for this tenant.
+    endpoint = None
+    if region:
+        endpoint = _find_given_region(target, region)
+
+    # NOTE(cabrera): if no endpoint was detected for a specific region
+    # or no region was provided, attempt to grab a generic endpoint
+    if (not region) or (not endpoint):
+        endpoint = _find_generic_endpoint(target)
+
+    return _normalize_endpoint(endpoint[u'publicURL'])
 
 
 class Connection(object):
-    def __init__(self, username, apikey=None, password=None):
+    def __init__(self, username, apikey=None, password=None, region=None):
         assert apikey or password
 
         resp = None
         # If apikey and password are given, give priority to
         # authentication via API key.
         if apikey:
-            resp = authenticate(username, apikey=apikey)
+            resp = auth.authenticate(username, apikey=apikey)
         else:
-            resp = authenticate(username, password=password)
+            resp = auth.authenticate(username, password=password)
 
         self._token = resp['access']['token']['id']
         endpoints = resp['access']['serviceCatalog']
-        self._endpoint = _find_backup_endpoint(endpoints)
+
+        try:
+            self._endpoint = _find_backup_endpoint(endpoints, region)
+        except TypeError:
+            raise exceptions.NoEndpointFound(username, region)
+
         self._username = username
         self._tenant = resp['access']['token']['tenant']['id']
         self._expiry = resp['access']['token']['expires']

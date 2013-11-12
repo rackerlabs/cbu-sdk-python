@@ -24,3 +24,9 @@ class InconsistentInclusionsError(ValueError):
     def __init__(self, diff_set):
         msg_template = '{0} are included and excluded. Which did you mean?'
         ValueError.__init__(self, msg_template.format(diff_set))
+
+
+class NoEndpointFound(RuntimeError):
+    def __init__(self, username, region):
+        msg = 'No endpoint found for user {0} in region {1}'
+        super(NoEndpointFound, self).__init__(msg.format(username, region))

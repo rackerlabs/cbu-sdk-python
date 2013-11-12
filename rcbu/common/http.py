@@ -1,4 +1,5 @@
-import flufl.enum as enum
+import enum
+
 
 _methods = 'head get put post delete patch options'.split()
 Http = enum.Enum('Http', _methods)
