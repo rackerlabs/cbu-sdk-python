@@ -1,4 +1,4 @@
-python-dateutil
-requests==1.2.0
-pycrypto
-flufl.enum
+python-dateutil>=2.2
+requests>=2.0.0
+pycrypto>=2.6.1
+enum34>=0.9
