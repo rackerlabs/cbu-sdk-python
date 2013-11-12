@@ -1,4 +1,5 @@
-include tools/*
+include requirements.txt
+include test-requirements.txt
 include docs/*
 include README.rst
 include conf/*

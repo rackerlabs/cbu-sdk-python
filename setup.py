@@ -2,8 +2,8 @@ import os
 import re
 from setuptools import setup, find_packages
 
-pip_requires = os.path.join(os.getcwd(), 'tools', 'pip-requires')
-test_requires = os.path.join(os.getcwd(), 'tools', 'test-requires')
+pip_requires = os.path.join(os.getcwd(), 'requirements.txt')
+test_requires = os.path.join(os.getcwd(), 'test-requirements.txt')
 
 def credentials():
     install_path = os.path.join(os.path.expanduser('~'),
