@@ -2,7 +2,7 @@
 Cloud Backup API Python SDK
 ***************************
 
-:version: 0.17.2
+:version: 0.18.0
 :Presentations: `Introduction`_
 
 Welcome to the Python bindings to the Rackspace Cloud Backup
