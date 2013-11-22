@@ -1,4 +1,5 @@
+enum34>=0.9
+hacking>=0.8.0
+pycrypto>=2.6.1
 python-dateutil>=2.2
 requests>=2.0.0
-pycrypto>=2.6.1
-enum34>=0.9
