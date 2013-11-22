@@ -16,29 +16,15 @@ def _parse_config():
     return (data.get('username', None),
             data.get('apikey', None),
             data.get('email', None),
-            data.get('tenant', None))
+            data.get('tenant', None),
+            data.get('region', None))
 
 
 class Credentials(object):
     def __init__(self):
-        name, key, email, tenant = _parse_config()
-        self._name = name
-        self._key = key
-        self._email = email
-        self._tenant = tenant
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def key(self):
-        return self._key
-
-    @property
-    def email(self):
-        return self._email
-
-    @property
-    def tenant(self):
-        return self._tenant
+        name, key, email, tenant, region = _parse_config()
+        self.name = name
+        self.key = key
+        self.email = email
+        self.tenant = tenant
+        self.region = region

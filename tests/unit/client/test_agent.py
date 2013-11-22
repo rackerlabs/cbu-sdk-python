@@ -44,7 +44,7 @@ class TestAgent(unittest.TestCase):
     @httprettified
     def setUp(self):
         _mock_auth(200)
-        self.conn = Connection('1', '2')
+        self.conn = Connection('1', 'dfw', password='3')
         self.client = Client(self.conn)
         self.agent = agent.from_dict(agent_mock.agent(), self.conn)
 

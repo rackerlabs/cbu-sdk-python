@@ -9,7 +9,7 @@ class TestClientBasic(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         creds = Credentials()
-        cls.connection = Connection(creds.name,
+        cls.connection = Connection(creds.name, creds.region,
                                     apikey=creds.key)
         cls.client = Client(cls.connection)
 

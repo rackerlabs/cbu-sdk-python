@@ -19,7 +19,7 @@ class TestBackup(unittest.TestCase):
     @httprettified
     def setUp(self):
         _mock_auth(200)
-        self.connection = Connection('a', 'b')
+        self.connection = Connection('a', 'dfw', password='c')
         self.cmd = backup.Backup(1, 2, connection=self.connection)
 
     @httprettified

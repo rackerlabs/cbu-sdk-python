@@ -18,7 +18,8 @@ class TestBackupConfiguration(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.creds = Credentials()
-        cls.connection = Connection(cls.creds.name, apikey=cls.creds.key)
+        cls.connection = Connection(cls.creds.name, cls.creds.region,
+                                    apikey=cls.creds.key)
         cls.email = cls.creds.email
         cls.agent = Agent()
         os.mkdir('a')

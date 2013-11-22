@@ -11,7 +11,8 @@ class TestConnect(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.creds = Credentials()
-        cls.connection = Connection(cls.creds.name, apikey=cls.creds.key)
+        cls.connection = Connection(cls.creds.name, cls.creds.region,
+                                    apikey=cls.creds.key)
 
     def setup(self):
         self.connection = TestConnect.connection
@@ -23,8 +24,8 @@ class TestConnect(unittest.TestCase):
         self.assertEqual(self.connection.tenant, TestConnect.creds.tenant)
 
     def test_host_correct(self):
-        self.assertEqual(self.connection.host,
-                         'https://backup.api.rackspacecloud.com/v1.0')
+        self.assertIn('backup.api.rackspacecloud.com',
+                      self.connection.host,)
 
     def test_api_version_correct(self):
         self.assertEqual(self.connection.api_version, '1.0')

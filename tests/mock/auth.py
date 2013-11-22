@@ -1,4 +1,5 @@
 MOCK_KEY = 'key'
+MOCK_REGION = 'dfw'
 MOCK_ENDPOINT = 'http://tacobackup.com/v1.0/912371'
 MOCK_ENDPOINT_STRIPPED = 'http://tacobackup.com/v1.0'
 
@@ -9,7 +10,8 @@ def authenticate():
             'type': 'rax:backup',
             'endpoints': [
                 {
-                    'publicURL': MOCK_ENDPOINT
+                    'publicURL': MOCK_ENDPOINT,
+                    'region': MOCK_REGION
                 }
             ]
         },

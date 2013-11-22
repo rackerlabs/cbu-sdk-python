@@ -36,7 +36,7 @@ class TestCommand(unittest.TestCase):
     @httprettified
     def setUp(self):
         _mock_auth(200)
-        self.connection = Connection('a', 'b')
+        self.connection = Connection('a', 'dfw', password='c')
         self.cmd = command.Command(1, 'backup', self.connection)
 
     def test_default_state_matches_expected(self):

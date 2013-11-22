@@ -23,7 +23,7 @@ class TestActivityMixin(unittest.TestCase):
         reply = authenticate()
         HTTPretty.register_uri(HTTPretty.POST, IDENTITY_TOKEN_URL,
                                status=200, body=json.dumps(reply))
-        self.connection = Connection('a', 'b')
+        self.connection = Connection('a', 'dfw', password='c')
         self.agent = Mock(self.connection, AGENT_ID)
         self.url = '{0}/system/activity/{1}'.format(self.connection.host,
                                                     AGENT_ID)

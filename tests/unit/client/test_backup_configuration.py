@@ -60,7 +60,7 @@ class TestBackupConfiguration(unittest.TestCase):
     @httprettified
     def setUp(self):
         _mock_auth(200)
-        self.connection = Connection(username='a', password='a')
+        self.connection = Connection(username='a', region='dfw', password='a')
         config_api = mock_config.backup_configuration()
         self.config = backup_config.from_dict(config_api, self.connection)
 

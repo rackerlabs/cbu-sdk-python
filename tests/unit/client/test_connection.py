@@ -24,7 +24,7 @@ class TestValidConnection(unittest.TestCase):
     @httprettified
     def setUp(self):
         _mock_auth(200)
-        self.conn = Connection('a', password='a')
+        self.conn = Connection('a', 'dfw', password='a')
         self.client = Client(self.conn)
 
     def test_connection_has_correct_properties(self):

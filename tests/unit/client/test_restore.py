@@ -20,7 +20,7 @@ class TestRestore(unittest.TestCase):
     @httprettified
     def setUp(self):
         _mock_auth(200)
-        self.connection = Connection('a', 'b')
+        self.connection = Connection('a', 'dfw', password='c')
         self.cmd = restore.Restore(1, connection=self.connection)
 
     @httprettified
