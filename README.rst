@@ -36,7 +36,8 @@ I'll let the code speak for ease of use:
     from rcbu.client.connection import Connection
     import rcbu.client.backup_configuration as backup_config
 
-    conn = Connection('username', apikey='981263y1hq82yh8y9q38q2')
+    conn = Connection('username', 'dfw',
+                      apikey='981263y1hq82yh8y9q38q2')
     client = Client(conn)
     myconf = backup_config.from_file('backup_config.json', conn)
 

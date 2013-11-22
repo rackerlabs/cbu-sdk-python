@@ -4,15 +4,16 @@ from rcbu.client.connection import Connection
 from rcbu.client.client import Client
 
 
-if len(sys.argv) != 3:
-    print('usage: {0} username password'.format(sys.argv[0]))
+if len(sys.argv) != 4:
+    print('usage: {0} username region password'.format(sys.argv[0]))
     quit()
 
 username = sys.argv[1]
-password = sys.argv[2]
+region = sys.argv[2]
+password = sys.argv[3]
 
 print('Connecting...')
-conn = Connection(username, password=password)
+conn = Connection(username, region, password=password)
 client = Client(conn)
 print('Connected!')
 
