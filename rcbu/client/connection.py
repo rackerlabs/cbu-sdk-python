@@ -12,19 +12,10 @@ def _normalize_endpoint(url):
     return url[:idx]
 
 
-def _find_given_region(target, region):
-    region_matcher = lambda x: x['region'] == region.upper()
+def _find_endpoint(target, region):
+    region_matcher = lambda x: x['region'].upper() == region.upper()
     try:
         return next(six.moves.filter(region_matcher,
-                                     target['endpoints']))
-    except StopIteration:
-        return None
-
-
-def _find_generic_endpoint(target):
-    regionless_matcher = lambda x: u'region' not in x
-    try:
-        return next(six.moves.filter(regionless_matcher,
                                      target['endpoints']))
     except StopIteration:
         return None
@@ -37,20 +28,18 @@ def _find_backup_endpoint(catalogue, region):
     # NOTE(cabrera): attempt to grab a region-specific endpoint. If
     # this fails, then either the region provided was not valid or
     # there are no region-specific endpoints for this tenant.
-    endpoint = None
-    if region:
-        endpoint = _find_given_region(target, region)
+    endpoint = _find_endpoint(target, region)
 
     # NOTE(cabrera): if no endpoint was detected for a specific region
     # or no region was provided, attempt to grab a generic endpoint
-    if (not region) or (not endpoint):
-        endpoint = _find_generic_endpoint(target)
+    if not endpoint:
+        return None
 
     return _normalize_endpoint(endpoint[u'publicURL'])
 
 
 class Connection(object):
-    def __init__(self, username, apikey=None, password=None, region=None):
+    def __init__(self, username, region, apikey=None, password=None):
         assert apikey or password
 
         resp = None
@@ -64,9 +53,8 @@ class Connection(object):
         self._token = resp['access']['token']['id']
         endpoints = resp['access']['serviceCatalog']
 
-        try:
-            self._endpoint = _find_backup_endpoint(endpoints, region)
-        except TypeError:
+        self._endpoint = _find_backup_endpoint(endpoints, region)
+        if not self._endpoint:
             raise exceptions.NoEndpointFound(username, region)
 
         self._username = username
