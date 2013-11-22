@@ -79,7 +79,7 @@ class TestCommand(unittest.TestCase):
                                body=json.dumps(_mock_status_done()))
         with Timer() as timed:
             self.cmd.wait_for_completion(poll_interval=.005)
-        self.assertLess(timed.elapsed, .005)
+        self.assertLess(timed.elapsed, .010)
 
     @httprettified
     def test_wait_for_completion_works_poll_once(self):
@@ -92,5 +92,5 @@ class TestCommand(unittest.TestCase):
         HTTPretty.register_uri(HTTPretty.GET, url, responses=resps)
         with Timer() as timed:
             self.cmd.wait_for_completion(poll_interval=.005)
-        self.assertGreater(timed.elapsed, .005)
+        self.assertGreater(timed.elapsed, .003)
         self.assertLess(timed.elapsed, .015)
