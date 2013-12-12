@@ -1,4 +1,4 @@
 enum34>=0.9
 pycrypto>=2.6.1
 python-dateutil>=2.2
-requests>=2.0.0
+requests>=2.1.0
