@@ -7,6 +7,9 @@ Cloud Backup API Python SDK
 .. image:: https://requires.io/github/cabrera/python-cloudbackup-sdk/requirements.png?branch=master
    :target: https://requires.io/github/cabrera/python-cloudbackup-sdk/requirements/?branch=master
    :alt: Requirements Status
+.. image:: https://travis-ci.org/cabrera/python-cloudbackup-sdk.png?branch=master
+   :target: https://travis-ci.org/cabrera/python-cloudbackup-sdk
+   :alt: TravisCI Status
 
 Welcome to the Python bindings to the Rackspace Cloud Backup
 API. These bindings will help you make the most of the Cloud Backup
