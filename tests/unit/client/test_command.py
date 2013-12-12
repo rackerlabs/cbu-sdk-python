@@ -93,4 +93,4 @@ class TestCommand(unittest.TestCase):
         with Timer() as timed:
             self.cmd.wait_for_completion(poll_interval=.005)
         self.assertGreater(timed.elapsed, .003)
-        self.assertLess(timed.elapsed, .015)
+        self.assertLess(timed.elapsed, .020)

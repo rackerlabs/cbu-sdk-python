@@ -3,6 +3,6 @@ python:
   - 2.6
   - 2.7
   - 3.3
-install: pip install -r test-requirements.txt
+install: pip install -r test-requirements.txt -r requirements.txt
 script:
     - nosetests --with-coverage --cover-package=rcbu tests/unit
