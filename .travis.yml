@@ -5,3 +5,5 @@ python:
 install: pip install -r test-requirements.txt -r requirements.txt
 script:
     - nosetests --with-coverage --cover-package=rcbu tests/unit
+after_success:
+  - coveralls
