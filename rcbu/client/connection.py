@@ -60,7 +60,7 @@ class Connection(object):
         self._username = username
         self._tenant = resp['access']['token']['tenant']['id']
         self._expiry = resp['access']['token']['expires']
-        self._session = requests
+        self._session = requests.session()
 
     def __repr__(self):
         msg = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
