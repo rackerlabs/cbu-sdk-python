@@ -12,6 +12,9 @@ def authenticate():
                 {
                     'publicURL': MOCK_ENDPOINT,
                     'region': MOCK_REGION
+                },
+                {
+                    'publicURL': MOCK_ENDPOINT,
                 }
             ]
         },
