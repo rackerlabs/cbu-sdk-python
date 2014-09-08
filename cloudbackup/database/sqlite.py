@@ -47,7 +47,6 @@ class CloudBackupSqlite(object):
         del self.dbinstance
         self.dbinstance = None
 
-
     def __is_db_opened(self):
         """
         Return whether or not the database is currently opened for use
@@ -309,7 +308,7 @@ class CloudBackupSqlite(object):
         """
         conn = self.dbinstance.cursor()
         conn2 = self.dbinstance.cursor()
-        results = list() 
+        results = list()
         results.append(0)
 
         self.log.debug('Checking for unique constraint errors...')
@@ -341,7 +340,7 @@ class CloudBackupSqlite(object):
         """
         conn = self.dbinstance.cursor()
 
-        results = conn.execute('SELECT path FROM directories WHERE directoryid == {0:}'.format(entry['directoryid']))
+        results = conn.execute('SELECT path FROM directories WHERE directoryid == {0:}'.format(directoryid))
         directory = results.fetchone()
         return directory[0]
 
@@ -378,7 +377,6 @@ class CloudBackupSqlite(object):
 
         return True
 
-
     def AddSnapshot(self, old_snapshots=None):
         """
         Insert new snapshot id(s).
@@ -393,11 +391,11 @@ class CloudBackupSqlite(object):
         # If no old snapshotid was specified, then find the maximum one in the database
         if old_snapshots is None:
             max_existing_snapshot_results = conn.execute('SELECT MAX(snapshotid) FROM snapshots')
-            max_existing_snapshot =  max_existing_snapshot_results.fetchone()
+            max_existing_snapshot = max_existing_snapshot_results.fetchone()
             old_snapshots = list()
             old_snapshots.append(max_existing_snapshot[0])
 
-        # Keep a list of the new snapshotids so we can return the maximum one, useful for the Caller for uploads to CloudFiles 
+        # Keep a list of the new snapshotids so we can return the maximum one, useful for the Caller for uploads to CloudFiles
         new_snapshots = list()
         for snapshot in old_snapshots:
 
@@ -406,8 +404,8 @@ class CloudBackupSqlite(object):
             max_existing_snapshot = max_existing_snapshot_results.fetchone()
             new_snapshot_id = int(max_existing_snapshot[0]) + 1
 
-            # Insert a new snapshot into the database using an existing snapshot as a baseline for certain values 
-            results = conn.execute('INSERT INTO snapshots (snapshotid, startdate, state, cleanupindex, backupconfigurationid) SELECT {0:}, startdate, 4, cleanupindex, backupconfigurationid FROM snapshots WHERE snapshotid == {1:}'.format(new_snapshot_id, snapshot))
+            # Insert a new snapshot into the database using an existing snapshot as a baseline for certain values
+            conn.execute('INSERT INTO snapshots (snapshotid, startdate, state, cleanupindex, backupconfigurationid) SELECT {0:}, startdate, 4, cleanupindex, backupconfigurationid FROM snapshots WHERE snapshotid == {1:}'.format(new_snapshot_id, snapshot))
 
             # And save the result
             new_snapshots.append(new_snapshot_id)
@@ -440,9 +438,9 @@ class CloudBackupSqlite(object):
         self.dbfile = new_filename
         self.__open_db()
 
-        return True 
+        return True
 
-    def BloatDatabase(self, table_suffix=None, granularity=1024*1024, minimum_compressed_size=5.1*1024*1024*1024):
+    def BloatDatabase(self, table_suffix=None, granularity=1024 * 1024, minimum_compressed_size=5.1 * 1024 * 1024 * 1024):
         """
         Insert a table with random data in its columns to grow the database sufficiently to create a compressed database >5GB.
         File size typically needs to be in the 12GB+ range
@@ -463,7 +461,7 @@ class CloudBackupSqlite(object):
                 database_is_opened = True
 
             # Generate a temp file for copying the compressed database to
-            temp_file_info = tempfile.mkstemp();
+            temp_file_info = tempfile.mkstemp()
             bloat_db_temp_file = temp_file_info[1]
 
             print('Compressing file for size check')
@@ -476,19 +474,14 @@ class CloudBackupSqlite(object):
                     while check_compressed_file_continue_loop:
                         file_chunk = input_file.read(1024)
                         if len(file_chunk) == 0:
-                            check_compressed_file_continue_loop = False 
+                            check_compressed_file_continue_loop = False
                         else:
                             gzip_file.write(file_chunk)
-            #
-            # So for now...
-
-            #import subprocess
-            #subprocess.call('gzip -c {0:} > {1:}'.format(self.dbfile, temp_file_info), shell=True)
 
             # Get the compressed file size
             gzip_file_size = os.path.getsize(bloat_db_temp_file)
 
-            file_sizes = ( gzip_file_size, gzip_file_size / 1024, gzip_file_size / (1024 * 1024), gzip_file_size / (1024 * 1024 * 1024))
+            file_sizes = (gzip_file_size, gzip_file_size / 1024, gzip_file_size / (1024 * 1024), gzip_file_size / (1024 * 1024 * 1024))
 
             print('\tSize: {0:} bytes, {1:} kilobytes, {2:} megabytes, {3:} gigabytes'.format(file_sizes[0], file_sizes[1], file_sizes[2], file_sizes[3]))
 
@@ -511,7 +504,7 @@ class CloudBackupSqlite(object):
 
         # Minimum 5.1 GB = 5.1*1024 MB = 5.1*1024*1024 KB = 5.1*1024*1024*1024 bytes
         if original_compressed_size < minimum_compressed_size:
-           
+
             # Ensure the database is opened for use
             if self.__is_db_opened() is False:
                 self.log.debug('Database was closed. Opening.')
@@ -526,7 +519,7 @@ class CloudBackupSqlite(object):
                 table_name = 'bloat_table_{0:}'.format(table_suffix)
 
             conn = self.dbinstance.cursor()
-            
+
             # Ensure the table already exists
             conn.execute('CREATE TABLE IF NOT EXISTS {0:} ( a INTEGER PRIMARY KEY ASC, b DATETIME NOT NULL, c TEXT NOT NULL)'.format(table_name))
 
@@ -541,7 +534,7 @@ class CloudBackupSqlite(object):
                 jumbo_count = 0
                 while jumbo_count < granularity:
                     loop_conn.execute('INSERT INTO {0:} (a, b, c) VALUES(NULL, DATETIME(\'now\'), HEX(RANDOMBLOB(128)))'.format(table_name))
-                    jumbo_count = jumbo_count + 1 
+                    jumbo_count = jumbo_count + 1
 
                 # Ensure the data is persistent
                 self.dbinstance.commit()

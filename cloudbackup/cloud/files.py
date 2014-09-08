@@ -45,7 +45,7 @@ class CloudFiles(Command):
         """
         self.apihost = self._get_container(uri)
         urioptions = '?format=json'
-        if not limit is -1:
+        if limit is not -1:
             urioptions += '&limit=%d' % limit
         if len(marker):
             urioptions += '&marker=%s' % marker
@@ -76,7 +76,7 @@ class CloudFiles(Command):
         """
         self.apihost = self._get_container(uri)
         urioptions = '/' + container + '?format=json'
-        if not limit is -1:
+        if limit is not -1:
             urioptions += '&limit=%d' % limit
         if len(marker):
             urioptions += '&marker=%s' % marker
@@ -273,7 +273,6 @@ class CloudFiles(Command):
 
         return dbdata
 
-
     def GetActiveDB(self, container, uripath, snapshot=None):
         """
         Look at the Cloud Backup Container in CloudFiles for the agent to find its latest VaultDB
@@ -346,11 +345,11 @@ class CloudFiles(Command):
         else:
             return result
 
-    def __GetLargeFileHashes(localpath):
+    def __GetLargeFileHashes(self, localpath):
         large_file_hashes = list()
         # 512 MB
         byte_boundary = 512 * 1024 * 1024
-        point_boundary = 1024*1024*1024
+        # point_boundary = 1024 * 1024 * 1024
         byte_read_count = 1024
 
         lf_hash = hashlib.md5()
@@ -482,7 +481,7 @@ class CloudFiles(Command):
                     vaultdb_data['sha1'] = sha1_hash.hexdigest().upper()
 
                 if meter['bytes-total'] > (5 * 1024 * 1024 * 1024):
-                    large_file_hashes = __GetLargeFileHashes(localpath)
+                    large_file_hashes = self.__GetLargeFileHashes(localpath)
                     vaultdb_data['large-file'] = {}
                     vaultdb_data['large-file']['hashes'] = large_file_hashes['hashes']
                     vaultdb_data['large-file']['md5'] = large_file_hashes['md5']
@@ -551,7 +550,6 @@ class CloudFiles(Command):
                     else:
                         raise NotImplementedError('The Compressed VaultDB is larger than the presently supported file size.')
 
-
             vaultdb_data['upload-md5'] = md5_hash.hexdigest().upper()
             if skip_md5_check is False:
                 if md5_hash.hexdigest().upper() != vaultdb_data['md5']:
@@ -571,8 +569,8 @@ class CloudFiles(Command):
             vaultdb_data['upload-compressed-md5-actual'] = vaultdb_data['upload-compressed-md5']
 
             # Cloud Files requires we split up based on 5 GB limits
-            if os.path.getsize(gzip_file) > 5*1024*1024*1024:
-                large_file_hashes = __GetLargeFileHashes(localpath)
+            if os.path.getsize(gzip_file) > 5 * 1024 * 1024 * 1024:
+                large_file_hashes = self.__GetLargeFileHashes(localpath)
                 vaultdb_data['upload-large-file'] = {}
                 vaultdb_data['upload-large-file']['hashes'] = large_file_hashes['hashes']
                 vaultdb_data['upload-large-file']['md5'] = large_file_hashes['md5']
@@ -581,8 +579,7 @@ class CloudFiles(Command):
                 vaultdb_data['upload-compressed-md5'] = vaultdb_data['upload-large-file']['md5']
 
                 # 512 MB boundaries
-                vaultdb_data['upload-split-boundary'] = 512*1024*1024
-
+                vaultdb_data['upload-split-boundary'] = 512 * 1024 * 1024
 
             # Retrieve the size in bytes of the data files - compressed and uncompressed
             vaultdb_data['upload-bytes'] = os.path.getsize(localpath)

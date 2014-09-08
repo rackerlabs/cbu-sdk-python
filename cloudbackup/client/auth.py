@@ -21,6 +21,7 @@ class AuthCredentialsErrors(AuthenticationError):
 class AuthExpirationError(AuthenticationError):
     pass
 
+
 def get_identity_apihost(datacenter):
     if datacenter in ('us', 'uk', 'lon', 'iad', 'dfw', 'ord'):
         return 'identity.api.rackspacecloud.com'
@@ -28,6 +29,7 @@ def get_identity_apihost(datacenter):
         return'{0:}.identity.api.rackspacecloud.com'.format(datacenter)
     else:
         raise AuthenticationError('Unknown Data Center: {0:}'.format(datacenter))
+
 
 class UserInformation(Command):
 
@@ -63,8 +65,6 @@ class Authentication(Command):
     Presently supports the RAX v2.0 API
     """
 
-
-
     @staticmethod
     def get_user_information(username, auth_token, datacenter='us'):
         """
@@ -79,8 +79,10 @@ class Authentication(Command):
         """
         Get the Tenant information
         """
-        tenant_info = TenantInformation(datacenter, username)
-    
+        raise NotImplementedError
+        # tenant_info = TenantInformation(datacenter, username)
+        # return tenant_info
+
     def __init__(self, userid, credentials, usertype='user', method='apikey', datacenter='us'):
         """
         Initialize the Agent access
@@ -225,14 +227,14 @@ class Authentication(Command):
                         'call': time_layer_compare, 'older': timeval_older.hour, 'newer': timeval_newer.hour, 'next': {  # Hour
                             'call': time_layer_compare, 'older': timeval_older.minute, 'newer': timeval_newer.minute, 'next': {  # Minute
                                 'call': time_layer_compare, 'older': timeval_older.second, 'newer': (timeval_newer.second + new_fuzz), 'next': None  # Second
-                                }
-                            }
-                        }
-                    }
-                }
+                                }  # noqa
+                            }  # noqa
+                        }  # noqa
+                    }  # noqa
+                }  # noqa
                 )
 
-        #2013-12-24T14:02:26.550Z
+        # 2013-12-24T14:02:26.550Z
         expirationtime = datetime.datetime.utcnow()
         try:
             try:
@@ -291,7 +293,7 @@ class Authentication(Command):
         except LookupError:
             raise AuthExpirationError('AuthToken Expiration Time Not available.')
             # We want all the data except the milliseconds
-            #return datetime.datetime.utcnow().isoformat()[0:19]
+            # return datetime.datetime.utcnow().isoformat()[0:19]
 
     @property
     def AuthTenantId(self):

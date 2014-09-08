@@ -43,9 +43,8 @@ def promptYesNoCancel(prompt, prefix=''):
     Simple Yes/No/Cancel prompt
     """
     menu = [
-            {'index': 1, 'text': 'Yes', 'type': 'YES'},
-            {'index': 2, 'text': 'No', 'type': 'NO'},
-            {'index': 3, 'text': 'Cancel', 'type': 'EXIT'}
-            ]
+        {'index': 1, 'text': 'Yes', 'type': 'YES'},
+        {'index': 2, 'text': 'No', 'type': 'NO'},
+        {'index': 3, 'text': 'Cancel', 'type': 'EXIT'}
+    ]
     return promptSimple(menu, prompt)
-

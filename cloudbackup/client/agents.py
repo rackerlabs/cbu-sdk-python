@@ -126,7 +126,7 @@ class AgentLogLevel(Command):
     Object controlling the log levels for agents
     """
     def __init__(self, sslenabled, authenticator, apihost):
-        super(self.__class__,self).__init__(sslenabled, apihost, '/')
+        super(self.__class__, self).__init__(sslenabled, apihost, '/')
         self.log = logging.getLogger(__name__)
 
         # save the ssl status for the various reinits done for each API call supported
@@ -182,7 +182,7 @@ class AgentLogLevel(Command):
 
         'level' may also be a numeric value inclusively between 1 and 7.
         """
-        if not level in ('Fatal', 'Error', 'Warn', 'Info', 'Debug', 'Trace', 'All', 1, 2, 3, 4, 5, 6, 7):
+        if level not in ('Fatal', 'Error', 'Warn', 'Info', 'Debug', 'Trace', 'All', 1, 2, 3, 4, 5, 6, 7):
             raise ValueError('Log Level (' + str(level) + ') is not valid.')
 
         self.ReInit(self.sslenabled, "/v1.0/agent/logging")
@@ -222,7 +222,7 @@ class AgentLogLevel(Command):
 
         Note: Log Levels are stored as a Stack. Use PopLogLevel() to restore the log level to the value prior to calling PushLogLevel().
         """
-        if not machine_agent_id in self.loglevel:
+        if machine_agent_id not in self.loglevel:
             self.loglevel[machine_agent_id] = list()
         current = self.GetLogLevel(machine_agent_id)
         self.loglevel[machine_agent_id].append(current)
@@ -271,7 +271,7 @@ class AgentDetails(object):
     def __init__(self, details):
         # Verify the details are at least what we expect before doing anything else
         for prop in ('MachineAgentId', 'AgentVersion', 'Architecture', 'Flavor', 'BackupVaultSize', 'CleanupAllowed', 'Datacenter', 'IPAddress', 'IsDisabled', 'IsEncrypted', 'MachineName', 'OperatingSystem', 'OperatingSystemVersion', 'PublicKey', 'Status', 'TimeOfLastSuccessfulBackup', 'UseServiceNet', 'HostServerId'):
-            x = details[prop]
+            details[prop]
 
         # Some cached data needed
         self._details = details
@@ -435,7 +435,7 @@ class AgentConfiguration(object):
         # some cached data needed
         self._configuration = configuration
 
-    #Volumes[]
+    # Volumes[]
     # -> DataServices
     # -> Uri
     # -> FailoverUri
@@ -447,8 +447,7 @@ class AgentConfiguration(object):
     def Volumes(self):
         return self._configuration['Volumes']
 
-
-    #SystemPreferences          See SystemPreferences
+    # SystemPreferences          See SystemPreferences
     # ->RateLimit
     # ->AutoUpdate
     #   --> Enabled
@@ -480,14 +479,14 @@ class AgentConfiguration(object):
     def MinimumCleanupDiskSpaceMb(self):
         return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Cleanup']
 
-    #UserPreferences
+    # UserPreferences
     # -> CacheDirectory
     # -> ThrottleBandwidth
     @property
     def UserPreferences(self):
         return self._configuration['UserPreferences']
 
-    #BackupConfigurations[]   See GetBackupConfigurationById(), GetBackupConfigurationByName()
+    # BackupConfigurations[]   See GetBackupConfigurationById(), GetBackupConfigurationByName()
     # -> BackupPrescript
     # -> BackupPostscript
     # -> Id                   See GetBackupIds(), GetBackupIdNameMap()
@@ -521,7 +520,7 @@ class AgentConfiguration(object):
     def BackupConfigurations(self):
         return self._configuration['BackupConfigurations']
 
-    #Rse                  See GetRse()
+    # Rse                  See GetRse()
     # -> Channel          See GetRseChannel()
     # -> HostName         See GetRseHost()
     # -> Polling          See GetRsePollingConfig()
@@ -832,12 +831,12 @@ class Agents(Command):
                 self.log.debug('Starting RSE Wakeup Thread for agent: {0:}'.format(machine_agent_id))
                 a_thread['terminator'] = threading.Event()
                 a_thread['thread'] = threading.Thread(target=_keep_agent_wake_thread_fn,
-                                               kwargs={'user': self.authenticator.Username, 'apikey': self.authenticator.Apikey,
-                                                       'rse_app': rse.rsedata.app, 'rse_version': rse.rsedata.appVersion,
-                                                       'rse_agentkey': rse.agentkey, 'rse_log': rse.rselogfile,
-                                                       'rse_apihost': rse.apihost, 'rse_period': period,
-                                                       'apihost': self.apihost, 'agent_id': machine_agent_id,
-                                                       'my_notifier': wake_agent_thread['terminator']})
+                                                      kwargs={'user': self.authenticator.Username, 'apikey': self.authenticator.Apikey,
+                                                              'rse_app': rse.rsedata.app, 'rse_version': rse.rsedata.appVersion,
+                                                              'rse_agentkey': rse.agentkey, 'rse_log': rse.rselogfile,
+                                                              'rse_apihost': rse.apihost, 'rse_period': period,
+                                                              'apihost': self.apihost, 'agent_id': machine_agent_id,
+                                                              'my_notifier': wake_agent_thread['terminator']})
                 a_thread['thread'].start()
                 break
 
@@ -1070,4 +1069,3 @@ class Agents(Command):
             # other issue - 400, 500, 503, or something else
             self.log.error('Error (code: {0:}): {1:}'.format(res.status_code, res.text))
             return False
-

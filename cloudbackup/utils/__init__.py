@@ -2,7 +2,7 @@
 Rackspace Cloud Backup API Utilities
 """
 from __future__ import print_function
-import cloudbackup.utils.printer
+import cloudbackup.utils.printer  # noqa
 
 import logging
 import os

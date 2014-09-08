@@ -3,7 +3,6 @@ Rackspace Deuce API
 """
 from __future__ import print_function
 
-import json
 import logging
 import requests
 
@@ -27,9 +26,6 @@ class DeuceVault(Command):
         # save the ssl status for the various reinits done for each API call supported
         self.sslenabled = sslenabled
         self.authenticator = authenticator
-
-
-
 
 
 class DeuceClient(Command):
@@ -136,7 +132,7 @@ class DeuceClient(Command):
         res = requests.get(self.Uri, headers=self.Headers)
 
         if res.status_code == 200:
-            return res.json() 
+            return res.json()
         else:
             raise RuntimeError('Failed to get Vault statistics. Error ({0:}): {1:}'.format(res.status_code, res.text))
 

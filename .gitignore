@@ -1,8 +1,11 @@
 dist
 .coverage
+cloudbackup/cover
 .tox/
 coverage.xml
 nosetests.xml
-rackspace_backup_client.egg-info/
+rackspace_cloudbackup_client.egg-info/
 *.pyc
 *__pycache__*
+
+*.swp

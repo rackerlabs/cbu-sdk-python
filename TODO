@@ -1,0 +1,6 @@
+TODO
+====
+
+- Look at converting cloudbackup.client.auth over to a wrapper around Keystone Client
+- Add Unit Tests
+- Pep8 Compliance

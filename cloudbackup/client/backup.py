@@ -127,7 +127,7 @@ class BackupConfiguration(object):
                 rbc.TimeZoneId = config['TimeZoneId']
                 rbc.VersionRetention = config['VersionRetention']
 
-                keys_to_copy = ['BackupConfigurationName','Exclusions','Inclusions']
+                keys_to_copy = ['BackupConfigurationName', 'Exclusions', 'Inclusions']
 
             elif source == 'backup-configuration':
                 rbc.Active = rbc.from_dict['IsActive']
@@ -190,15 +190,13 @@ class BackupConfiguration(object):
 
         keys_to_remove = []
 
-        if self.dict_source == 'agent-configuration': 
+        if self.dict_source == 'agent-configuration':
             keys_to_remove = ['BackupConfigurationId',
-                            'BackupConfigurationScheduled'
-                            ]
+                              'BackupConfigurationScheduled']
 
         elif self.dict_source == 'backup-configuration':
             keys_to_remove = ['LastRunBackupReportId',
-                            'LastRunTime'
-                            ]
+                              'LastRunTime']
 
         else:
             raise ValueError('Unknown backup configuration source. Unable to clean the dictionary')
@@ -218,15 +216,13 @@ class BackupConfiguration(object):
 
         keys_to_remove = []
 
-        if self.dict_source == 'agent-configuration': 
+        if self.dict_source == 'agent-configuration':
             keys_to_remove = ['BackupConfigurationId',
-                            'BackupConfigurationScheduled'
-                            ]
+                              'BackupConfigurationScheduled']
 
         elif self.dict_source == 'backup-configuration':
             keys_to_remove = ['LastRunBackupReportId',
-                            'LastRunTime'
-                            ]
+                              'LastRunTime']
 
         else:
             raise ValueError('Unknown backup configuration source. Unable to clean the dictionary')

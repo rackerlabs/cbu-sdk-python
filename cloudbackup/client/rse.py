@@ -134,7 +134,7 @@ class Rse(Command):
         """
         res = requests.get(self.Uri, headers=self.Headers)
         self.log.debug('RSE Query: Code (%s)', res.status_code)
-        if not self.rselogfile is None:
+        if self.rselogfile is not None:
             with open(self.rselogfile, 'a') as out:
                 out.write('=======================================================================\n')
                 out.write('Time: ' + time.strftime('%Y-%m-%d %H:%M:%S %Z') + '\n')
@@ -169,7 +169,7 @@ class Rse(Command):
                 # Find the heart beat messages and determine if there is one
                 # for the specified agent
                 for event in rsemsg['events']:
-                    if not self.rselogfile is None:
+                    if self.rselogfile is not None:
                         with open(self.rselogfile, 'a') as out:
                             out.write('(RSE) Message: ')
                             out.write(str(event))
@@ -180,7 +180,7 @@ class Rse(Command):
                 return False
             else:
                 for event in rsemsg:
-                    if not self.rselogfile is None:
+                    if self.rselogfile is not None:
                         with open(self.rselogfile, 'a') as out:
                             out.write('(API) Message: ')
                             out.write(str(event))
