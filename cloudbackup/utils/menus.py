@@ -5,6 +5,8 @@ from __future__ import print_function
 
 import logging
 
+import six
+
 
 def printMenu(menu, showExit=True, prefix=''):
     for entry in menu:
@@ -26,7 +28,11 @@ def promptSelection(menu, prompt, prefix=''):
     while not user_terminated:
         printMenu(menu)
         try:
-            selection = int(raw_input('{0:}: '.format(prompt)))
+            if six.PY2:
+                selection = int(raw_input('{0:}: '.format(prompt)))
+            else:
+                selection = int(input('{0:}: '.format(prompt)))
+
             return getMenuEntry(menu, selection)
 
         except Exception as ex:

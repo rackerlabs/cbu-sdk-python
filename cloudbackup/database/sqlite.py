@@ -4,9 +4,11 @@ Rackspace Cloud Backup SQLite Database Functionality
 from __future__ import print_function
 
 import base64
+import datetime
 import logging
 import os
 import os.path
+import random
 import sqlite3
 
 
@@ -48,14 +50,14 @@ class CloudBackupCleanUpOffset(object):
     @classmethod
     def get_next_cleanup_time(cls, offset, daysToKeepOldVersions, adjustment=None):
         """Calculate the next cleanup week
-        
+
         (Current Time (Unix Epoch) + (mDaysToKeepFiles * Seconds Per Day) + Offset) / Seconds Per Week
         """
         cleanup_week = None
         weekday = None
 
         if daysToKeepOldVersions is cls.KEEP_EXPIRED_FILES_FOREVER:
-            cleanup_week =  cls.CLEANUP_INDEX_NEVER_DELETE  
+            cleanup_week = cls.CLEANUP_INDEX_NEVER_DELETE
 
         elif not isinstance(offset, CloudBackupCleanUpOffset):
             raise TypeError('offset must be an instance of CloudBackupCleanUpOffset')
@@ -83,7 +85,7 @@ class CloudBackupCleanUpOffset(object):
 
             # Cleanup Week is # of weeks since 1970
             cleanup_week = current_week + weeks_offset
-            
+
             # offset.offset is really just a Unix Epoch offset,
             # so treat it as a Unix Epoch to determine which day of the week starts
             # the cleanup week for this agent
@@ -170,7 +172,8 @@ class CloudBackupCleanUpOffset(object):
 
         except ValueError:
             self._offset = old_offset
-            raise ValueError('Seconds ({1:}) cannot make offset go below zero (0) or above {0:}'.format(self.__class__.INVALID_CLEANUP_OFFSET, seconds)) 
+            raise ValueError('Seconds ({1:}) cannot make offset go below zero (0) or above {0:}'.format(self.__class__.INVALID_CLEANUP_OFFSET, seconds))
+
 
 class CloudBackupSqlite(object):
     """
@@ -468,7 +471,7 @@ class CloudBackupSqlite(object):
         conn = self.dbinstance.cursor()
 
         backupconfigurations = []
-        
+
         for result in conn.execute('SELECT backupconfigurationid, legacyguid, externalid, cleanupdays, removed FROM backupconfigurations'):
             backupconfiguration = {
                 'backupconfigurationid': int(result[0]),
@@ -658,7 +661,6 @@ class CloudBackupSqlite(object):
 
         return True
 
- 
     def ResetAgentCleanUpOffset(self):
         """
         Returns the Cleanup Offset to the default value which will cause the agent to generate a new random
@@ -778,7 +780,7 @@ class CloudBackupSqlite(object):
     def GetSnapshots(self, backupconfigurationids=None, states=None):
         """
         Returns the list of existing snapshots
-        
+
         :param backupconfigurationids: list of backup configuration ids to return snapshots for
         :param states: list of backup states to return snapshots for
         """
