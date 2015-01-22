@@ -10,6 +10,168 @@ import os.path
 import sqlite3
 
 
+class CloudBackupCleanUpOffset(object):
+
+    MAX_CLEANUP_OFFSET = int(datetime.timedelta(weeks=1).total_seconds())
+    INVALID_CLEANUP_OFFSET = (MAX_CLEANUP_OFFSET + 1)
+
+    KEEP_EXPIRED_FILES_FOREVER = 0
+    CLEANUP_INDEX_NEVER_DELETE = 1999999999
+
+    @classmethod
+    def random_index(cls):
+        """Generate a new Random Offset Value
+
+        :returns: int - random value where 0 <= v <= MAX_CLEANUP_OFFSET
+        """
+        return random.randint(0, cls.MAX_CLEANUP_OFFSET)
+
+    @classmethod
+    def make_new_valid_offset(cls, offset, seconds):
+        """Calculate a new offset value based on an existing offset and the number of seconds to change it by
+
+        :returns: int - number of seconds the offset adds to the base time
+        """
+        o = CloudBackupCleanUpOffset(offset=offset)
+        if (o.offset == cls.INVALID_CLEANUP_OFFSET):
+            raise ValueError('Offset is not modifiable at this time. Please set a modifiable offset first.')
+
+        # Enforce that the new offset must be a valid offset value
+        if o.offset == cls.INVALID_CLEANUP_OFFSET:
+            o.offset = cls.MAX_CLEANUP_OFFSET
+
+        if(o.offset + seconds) < 0:
+            raise ValueError('Offset will go below the minimum value. Please adjust forward in time.')
+
+        return int((o.offset + seconds) % cls.MAX_CLEANUP_OFFSET)
+
+    @classmethod
+    def get_next_cleanup_time(cls, offset, daysToKeepOldVersions, adjustment=None):
+        """Calculate the next cleanup week
+        
+        (Current Time (Unix Epoch) + (mDaysToKeepFiles * Seconds Per Day) + Offset) / Seconds Per Week
+        """
+        cleanup_week = None
+        weekday = None
+
+        if daysToKeepOldVersions is cls.KEEP_EXPIRED_FILES_FOREVER:
+            cleanup_week =  cls.CLEANUP_INDEX_NEVER_DELETE  
+
+        elif not isinstance(offset, CloudBackupCleanUpOffset):
+            raise TypeError('offset must be an instance of CloudBackupCleanUpOffset')
+
+        elif not ((adjustment is None) or isinstance(adjustment, datetime.timedelta)):
+            raise TypeError('adjustment must be none or  must be an instance of datetime.timedelta')
+
+        else:
+            current_time = datetime.datetime.utcnow()
+            adjust_by_days = datetime.timedelta(days=daysToKeepOldVersions)
+            adjust_offset = datetime.timedelta(seconds=offset.offset)
+
+            new_time = current_time + adjust_by_days + adjust_offset
+            if adjustment is not None:
+                new_time = new_time + adjustment
+
+            # Convert to ISO representation
+            iso_cal = new_time.isocalendar()
+
+            # ISO Week of the current year
+            current_week = iso_cal[1]
+
+            # Number of weeks since Jan 1, 1970
+            weeks_offset = (iso_cal[0] - 1970) * 52
+
+            # Cleanup Week is # of weeks since 1970
+            cleanup_week = current_week + weeks_offset
+            
+            # offset.offset is really just a Unix Epoch offset,
+            # so treat it as a Unix Epoch to determine which day of the week starts
+            # the cleanup week for this agent
+            weekday = datetime.datetime.fromtimestamp(offset.offset).strftime('%A - %H:%M:%S UTC')
+
+        return (cleanup_week, weekday)
+
+    @staticmethod
+    def getInvalidOffset():
+        """Create a new offset with the invalid offset set
+
+        :returns: CloudBackupCleanUpOffset with the new offset
+        """
+        return CloudBackupCleanUpOffset(offset=CloudBackupCleanUpOffset.INVALID_CLEANUP_OFFSET)
+
+    @staticmethod
+    def getRandomOffset():
+        """Create a new offset with the random offset set
+
+        :returns: CloudBackupCleanUpOffset with the new offset
+        """
+        return CloudBackupCleanUpOffset(offset=CloudBackupCleanUpOffset.random_index())
+
+    def __init__(self, offset=None):
+        """Initialize the cleanup offset
+
+        :param offset: int or CloudBackupCleanUpOffset - the cleanup offset being represented
+        :raises: TypeError - if offset is not an instance of int or CloudBackupCleanUpOffset
+        """
+
+        # if in then just store it
+        if isinstance(offset, int):
+            self._offset = offset
+            self.validate_offset()
+
+        # If CloudBackupCleanUpOffset then copy the offset over
+        elif isinstance(offset, CloudBackupCleanUpOffset):
+            offset.validate_offset()
+            self._offset = offset.offset
+
+        # Otherwise we don't support the conversion
+        else:
+            raise TypeError('Unknown offset type {0:}'.format(offset.__class__))
+
+    def validate_offset(self):
+        """Enforce that the stored offset is within the valid values
+
+        :raises: ValueError when the value exceeds the limit of 0 <= v <= INVALID_CLEANUP_INDEX
+        """
+        if self._offset < 0 or self._offset > self.__class__.INVALID_CLEANUP_OFFSET:
+            raise ValueError('offset must be in a range between 0 and {0:}'.format(self.__class__.INVALID_CLEANUP_OFFSET))
+
+    @property
+    def offset(self):
+        """Offset being stored
+
+        :returns: int - number of seconds the offset adds to the base time
+        """
+        if self._offset is None:
+            return self.__class__.INVALID_CLEANUP_OFFSET
+        else:
+            return self._offset
+
+    @offset.setter
+    def offset(self, offset):
+        """Update the stored offset to a new, specific value
+        """
+        self._offset = offset
+        self.validate_offset()
+
+    def changeBy(self, seconds=None):
+        """Modify the stored offset by the specified number of seconds
+
+        :raises: ValueError - when the new value is not valid
+        """
+        if self._offset is None:
+            raise ValueError('Offset is not modifiable at this time. Please set a modifiable offset first.')
+
+        old_offset = self._offset
+        try:
+            self._offset = self._offset + seconds
+            self.validate_offset()
+            return True
+
+        except ValueError:
+            self._offset = old_offset
+            raise ValueError('Seconds ({1:}) cannot make offset go below zero (0) or above {0:}'.format(self.__class__.INVALID_CLEANUP_OFFSET, seconds)) 
+
 class CloudBackupSqlite(object):
     """
     Cloud Backup Sqlite Database Interface
@@ -253,7 +415,7 @@ class CloudBackupSqlite(object):
                 bundles.append(bundledata)
         return bundles
 
-    def GetFileAddedInSnapshot(self, snapshotid):
+    def GetFileAddedInSnapshot(self, snapshotid, limit_lower=None, limit_higher=None):
         """
         Given a snapshot id, retrieve basic file information from the files table
 
@@ -266,10 +428,27 @@ class CloudBackupSqlite(object):
             type -- 1 folder, 0 file, 2 symlink
         """
         conn = self.dbinstance.cursor()
-        stmt = 'select f.fileid, f.directoryid, d.path, f.filename, f.type, ' \
-               'f.metadata from files f ' \
-               'join directories d  on f.directoryid=d.directoryid ' \
-               'where addedinsnapshotid=:snapshotid'
+        stmt = 'SELECT f.fileid, f.directoryid, d.path, f.filename, f.type, ' \
+               'f.metadata FROM files f ' \
+               'JOIN directories d  ON f.directoryid=d.directoryid ' \
+               'WHERE addedinsnapshotid =: snapshotid '\
+               'ORDER BY d.path'
+
+        stmt_dict = {
+            'snapshotid': snapshotid
+        }
+
+        if limit_lower:
+            stmt = '{0:} AND f.filename >= :lower_limit'.format(stmt)
+            stmt_dict['limit_lower'] = limit_lower
+
+        if limit_higher:
+            stmt = '{0:} AND f.filename < :higher_limit'.format(stmt)
+            stmt_dict['limit_higher'] = limit_higher
+
+        stmt = '{0:} ORDER BY d.path'.format(stmt)
+        print('SQL: {0:}'.format(stmt))
+
         results = list()
         for row in conn.execute(stmt, {'snapshotid': snapshotid}):
             fileInfo = dict()
@@ -281,6 +460,26 @@ class CloudBackupSqlite(object):
             fileInfo['metadata'] = row[5]
             results.append(fileInfo)
         return results
+
+    def GetBackupConfigurations(self):
+        """
+        Returns the list of existing backup configurations
+        """
+        conn = self.dbinstance.cursor()
+
+        backupconfigurations = []
+        
+        for result in conn.execute('SELECT backupconfigurationid, legacyguid, externalid, cleanupdays, removed FROM backupconfigurations'):
+            backupconfiguration = {
+                'backupconfigurationid': int(result[0]),
+                'legacyguid': result[1],
+                'externalid': int(result[2]),
+                'cleanupdays': int(result[3]),
+                'removed': int(result[4])
+            }
+            backupconfigurations.append(backupconfiguration)
+
+        return backupconfigurations
 
     def GetExternalBackupConfigurationId(self, backupconfigurationid):
         """
@@ -312,25 +511,84 @@ class CloudBackupSqlite(object):
         results.append(0)
 
         self.log.debug('Checking for unique constraint errors...')
-        for entry in conn.execute('SELECT directoryid, filename, addedinsnapshotid, lastsnapshotid, backupconfigurationid FROM files GROUP BY directoryid, filename, lastsnapshotid HAVING COUNT(*) > 1'):
+        for entry in conn.execute('SELECT COUNT(fileid), backupconfigurationid, directoryid, filename, addedinsnapshotid, lastsnapshotid FROM files WHERE lastsnapshotid=2000000000 GROUP BY filename, directoryid, backupconfigurationid HAVING COUNT(fileid) > 1'):
 
-            self.log.debug('Found entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}) with possible errors'.format(entry[0], entry[1], entry[4]))
+            info = {
+                'count': entry[0],
+                'backupconfigurationid': entry[1],
+                'directoryid': entry[2],
+                'filename': entry[3],
+                'addedinsnapshotid': entry[4],
+                'lastsnapshotid': entry[5]
+            }
+
+            self.log.debug('Found entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}: added-in={3:}, count={4:}) with possible errors'
+                           .format(info['directoryid'], info['filename'], info['backupconfigurationid'], info['addedinsnapshotid'], info['count']))
             # Reset the addedinsnapshot for each round
             first_round = True
 
             # Retrieve all invalid rows from the database for the provided entry
-            for row in conn2.execute('SELECT directoryid, filename, addedinsnapshotid, lastsnapshotid, backupconfigurationid FROM files WHERE filename = ? AND directoryid = ? AND lastsnapshotid = ? AND backupconfigurationid = ? ORDER BY addedinsnapshotid DESC', (entry[1], entry[0], entry[3], entry[4])):
+            for row in conn2.execute('SELECT directoryid, fileid, filename, addedinsnapshotid, lastsnapshotid, backupconfigurationid FROM files WHERE directoryid = ? AND filename = ? AND backupconfigurationid = ? AND lastsnapshotid = ? ORDER BY addedinsnapshotid DESC',
+                                     (info['directoryid'], info['filename'], info['backupconfigurationid'], info['lastsnapshotid'])):
+
+                confirmed_info = {
+                    'directoryid': row[0],
+                    'fileid': row[1],
+                    'filename': row[2],
+                    'addedinsnapshotid': row[3],
+                    'lastsnapshotid': row[4],
+                    'backupconfigurationid': row[5]
+                }
 
                 # First round we just want the snapshotid
                 # All remaining rounds we update the lastsnapshotid field to be the added in snapshotid of the previous round
                 if not first_round:
-                    self.log.debug('Confirmed entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}) has errors'.format(row[0], row[1], row[4]))
+                    self.log.debug('Confirmed entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}) has errors'
+                                   .format(confirmed_info['directoryid'], confirmed_info['filename'], confirmed_info['backupconfigurationid']))
                     results[0] = results[0] + 1
 
                 first_round = False
 
         if results[0] == 0:
             results.pop()
+
+        return results
+
+    def DetectUnicodeDirectoryNameErrors(self):
+        """
+        Detect if any directory names are in violation of the ASCII characters
+        """
+        conn = self.dbinstance.cursor()
+        results = list()
+
+        self.log.debug('Checking for ASCII errors in directory names...')
+        for entry in conn.execute('SELECT directoryid, path FROM directories'):
+            path_id = int(entry[0])
+            path = entry[1]
+            for v in path:
+                if ord(v) > 128:
+                    self.log.debug('Error with directory name. Directory ID = {0:}'.format(path_id))
+                    results.append((path_id, path))
+                    break
+
+        return results
+
+    def DetectUnicodeFileNameErrors(self):
+        """
+        Detect if any file names are in violation of the ASCII characters
+        """
+        conn = self.dbinstance.cursor()
+        results = list()
+
+        self.log.debug('Checking for ASCII errors in directory names...')
+        for entry in conn.execute('SELECT fileid, filename FROM files'):
+            file_id = int(entry[0])
+            filename = entry[1]
+            for v in filename:
+                if ord(v) > 128:
+                    self.log.debug('Error with file name. File ID = {0:}'.format(file_id))
+                    results.append((file_id, filename))
+                    break
 
         return results
 
@@ -354,20 +612,43 @@ class CloudBackupSqlite(object):
         commit_database = False
 
         self.log.debug('Checking for unique constraint errors...')
-        for entry in conn.execute('SELECT directoryid, filename, addedinsnapshotid, lastsnapshotid, backupconfigurationid FROM files GROUP BY directoryid, filename, lastsnapshotid HAVING COUNT(*) > 1'):
+        for entry in conn.execute('SELECT COUNT(fileid), backupconfigurationid, directoryid, filename, addedinsnapshotid, lastsnapshotid FROM files WHERE lastsnapshotid=2000000000 GROUP BY filename, directoryid, backupconfigurationid HAVING COUNT(fileid) > 1'):
 
-            self.log.debug('Found entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}) with possible errors'.format(entry[0], entry[1], entry[4]))
+            info = {
+                'count': entry[0],
+                'backupconfigurationid': entry[1],
+                'directoryid': entry[2],
+                'filename': entry[3],
+                'addedinsnapshotid': entry[4],
+                'lastsnapshotid': entry[5]
+            }
+
+            self.log.debug('Found entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}: added-in={3:}, count={4:}) with possible errors'
+                           .format(info['directoryid'], info['filename'], info['backupconfigurationid'], info['addedinsnapshotid'], info['count']))
+
             # Reset the addedinsnapshot for each round
             first_round = True
 
             # Retrieve all invalid rows from the database for the provided entry
-            for row in conn2.execute('SELECT directoryid, filename, addedinsnapshotid, lastsnapshotid, backupconfigurationid FROM files WHERE filename = ? AND directoryid = ? AND lastsnapshotid = ? AND backupconfigurationid = ? ORDER BY addedinsnapshotid DESC', (entry[1], entry[0], entry[3], entry[4])):
+            for row in conn2.execute('SELECT directoryid, fileid, filename, addedinsnapshotid, lastsnapshotid, backupconfigurationid FROM files WHERE directoryid = ? AND filename = ? AND backupconfigurationid = ? AND lastsnapshotid = ? ORDER BY addedinsnapshotid DESC',
+                                     (info['directoryid'], info['filename'], info['backupconfigurationid'], info['lastsnapshotid'])):
+
+                confirmed_info = {
+                    'directoryid': row[0],
+                    'fileid': row[1],
+                    'filename': row[2],
+                    'addedinsnapshotid': row[3],
+                    'lastsnapshotid': row[4],
+                    'backupconfigurationid': row[5]
+                }
 
                 # First round we just want the snapshotid
                 # All remaining rounds we update the lastsnapshotid field to be the added in snapshotid of the previous round
                 if not first_round:
-                    self.log.debug('Fixing entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}) - lastsnapshotid ({3:} -> {4:})'.format(row[0], row[1], row[4], row[3], row[2]))
-                    conn3.execute('UPDATE files SET lastsnapshotid = ? WHERE directoryid = ? AND filename = ? AND addedinsnapshotid = ? AND lastsnapshotid = ? AND backupconfigurationid = ?', (row[2], row[0], row[1], row[2], row[3], row[4]))
+                    self.log.debug('Fixing entry (directoryid={0:}, filename={1:}, backupconfigurationid={2:}) - lastsnapshotid ({3:} -> {4:})'
+                                   .format(confirmed_info['directoryid'], confirmed_info['filename'], confirmed_info['backupconfigurationid'], confirmed_info['lastsnapshotid'], confirmed_info['addedinsnapshotid']))
+                    conn3.execute('UPDATE files SET lastsnapshotid = ? WHERE directoryid = ? AND filename = ? AND addedinsnapshotid = ? AND lastsnapshotid = ? AND backupconfigurationid = ?',
+                                  (confirmed_info['addedinsnapshotid'], confirmed_info['directoryid'], confirmed_info['filename'], confirmed_info['addedinsnapshotid'], confirmed_info['lastsnapshotid'], confirmed_info['backupconfigurationid']))
                     commit_database = True
 
                 first_round = False
@@ -376,6 +657,82 @@ class CloudBackupSqlite(object):
             self.dbinstance.commit()
 
         return True
+
+ 
+    def ResetAgentCleanUpOffset(self):
+        """
+        Returns the Cleanup Offset to the default value which will cause the agent to generate a new random
+        time for the cleanup offset to occur at.
+        """
+        new_offset = CloudBackupCleanUpOffset.getInvalidOffset()
+        self.ChangeAgentCleanUpOffset(cleanup_offset=new_offset)
+
+    def GetAgentCleanUpOffset(self):
+        """
+        Retrieves the Cleanup Offset from the database and returns an CloudBackupCleanUpOffset object containing the result.
+        """
+        conn = self.dbinstance.cursor()
+        results = conn.execute('SELECT intvalue FROM keyvalues WHERE key="cleanupoffset"')
+
+        result = results.fetchone()
+        return CloudBackupCleanUpOffset(offset=int(result[0]))
+
+    def SetAgentCleanUpOffset(self, cleanup_offset=CloudBackupCleanUpOffset.getRandomOffset()):
+        """
+        Sets the Cleanup Offset into the database based on the provided CloudBackupCleanUpOffset object
+        """
+        if isinstance(cleanup_offset, CloudBackupCleanUpOffset):
+            if isinstance(cleanup_offset.offset, int):
+
+                conn = self.dbinstance.cursor()
+                conn.execute('INSERT OR REPLACE INTO keyvalues (key, intvalue) VALUES (?, ?)', ('cleanupoffset', cleanup_offset.offset))
+                self.dbinstance.commit()
+
+                return True
+
+            else:
+                raise TypeError('Cleanup Offset must be an integer type')
+
+        else:
+            raise TypeError('cleanup_offset must be an instance of CloudBackupCleanUpOffset')
+
+    def GetAgentLastCleanUpWeek(self):
+        """
+        Retrieves the Last Cleanup Week from the database and returns as an integer
+        """
+        conn = self.dbinstance.cursor()
+        results = conn.execute('SELECT intvalue FROM keyvalues WHERE key="lastcleanupindex"')
+
+        result = results.fetchone()
+        return int(result[0])
+
+    def GetAgentNextCleanupsForConfigurations(self, cleanup_offset=None, adjustment=None):
+        """
+        Calculate the next cleanup time for each configuration in the database
+
+        :param cleanup_offset: CloudBackupCleanUpOffset - the cleanup offset to use for the calculation
+        :returns: a list of the configurations and their next cleanup information
+                  each entry is a tuple of ( backupconfigurationid, cleanup week index, day of week that starts the cleanup week)
+        """
+        if cleanup_offset is None:
+            cleanup_offset = self.GetAgentCleanUpOffset()
+
+        conn = self.dbinstance.cursor()
+        results = conn.execute('SELECT backupconfigurationid, cleanupdays FROM backupconfigurations')
+
+        cleanup_times = []
+
+        for backupconfig_result in results:
+            backupconfigid = backupconfig_result[0]
+            cleanup_days = int(backupconfig_result[1])
+
+            next_cleanup_time = CloudBackupCleanUpOffset.get_next_cleanup_time(cleanup_offset, cleanup_days, adjustment=adjustment)
+
+            data = (backupconfigid, next_cleanup_time[0], next_cleanup_time[1])
+
+            cleanup_times.append(data)
+
+        return cleanup_times
 
     def AddSnapshot(self, old_snapshots=None):
         """
@@ -417,6 +774,40 @@ class CloudBackupSqlite(object):
             self.dbinstance.commit()
 
         return sorted_snapshots[0]
+
+    def GetSnapshots(self, backupconfigurationids=None, states=None):
+        """
+        Returns the list of existing snapshots
+        
+        :param backupconfigurationids: list of backup configuration ids to return snapshots for
+        :param states: list of backup states to return snapshots for
+        """
+        conn = self.dbinstance.cursor()
+
+        snapshots = []
+
+        for result in conn.execute('SELECT snapshotid, startdate, state, cleanupindex, backupconfigurationid FROM snapshots'):
+            snapshot = {
+                'snapshotid': int(result[0]),
+                'startdate': result[1],
+                'state': int(result[2]),
+                'cleanupindex': int(result[3]) if result[3] else '',
+                'backupconfigurationid': int(result[4])
+            }
+
+            # Skip any backup configurations that are not desired by the caller
+            if backupconfigurationids is not None:
+                if str(snapshot['backupconfigurationid']) not in backupconfigurationids:
+                    continue
+
+            # Skip any states that are not desired by the caller
+            if states is not None:
+                if str(snapshot['state']) not in states:
+                    continue
+
+            snapshots.append(snapshot)
+
+        return snapshots
 
     def Vacuum(self):
         """
