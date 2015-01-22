@@ -1,3 +1,5 @@
+import functools
+
 from rcbu.common import auth
 from rcbu.common import exceptions
 from rcbu.common import http
@@ -12,10 +14,15 @@ def _normalize_endpoint(url):
     return url[:idx]
 
 
+def _region_matcher(endpoint, region):
+    r = endpoint.get('region')
+    return region.upper() == r.upper() if r else False
+
+
 def _find_endpoint(target, region):
-    region_matcher = lambda x: x['region'].upper() == region.upper()
     try:
-        return next(six.moves.filter(region_matcher,
+        fn = functools.partial(_region_matcher, region=region)
+        return next(six.moves.filter(fn,
                                      target['endpoints']))
     except StopIteration:
         return None
@@ -60,7 +67,7 @@ class Connection(object):
         self._username = username
         self._tenant = resp['access']['token']['tenant']['id']
         self._expiry = resp['access']['token']['expires']
-        self._session = requests
+        self._session = requests.session()
 
     def __repr__(self):
         msg = ('<Connection host:{0} tenant:{1} username:{2} expires:{3}>')
