@@ -2,7 +2,7 @@
 Cloud Backup API Python SDK
 ***************************
 
-:version: 0.19.3
+:version: 0.20.0
 :Presentations: `Introduction`_
 .. image:: https://requires.io/github/cabrera/python-cloudbackup-sdk/requirements.png?branch=master
    :target: https://requires.io/github/cabrera/python-cloudbackup-sdk/requirements/?branch=master
