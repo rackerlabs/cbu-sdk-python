@@ -5,13 +5,13 @@ from setuptools import setup, find_packages
 pip_requires = os.path.join(os.getcwd(), 'requirements.txt')
 test_requires = os.path.join(os.getcwd(), 'test-requirements.txt')
 
-#def credentials():
-#    install_path = os.path.join(os.path.expanduser('~'),
-#                                '.pysdk')
-#    if os.path.exists(os.path.join(install_path, 'credentials.json')):
-#        return ('.', ['setup.py'])  # null install
-#    conf_path = os.path.join('conf', 'credentials.json')
-#    return (install_path, [conf_path])
+def credentials():
+    install_path = os.path.join(os.path.expanduser('~'),
+                                '.pysdk')
+    if os.path.exists(os.path.join(install_path, 'credentials.json')):
+        return ('.', ['setup.py'])  # null install
+    conf_path = os.path.join('conf', 'credentials.json')
+    return (install_path, [conf_path])
 
 
 def file_lines(path):
@@ -27,27 +27,22 @@ def parse_version():
         data = f.read()
     return '.'.join(re.search(r':version: (\d+)\.(\d+)\.(\d+)', data).groups())
 
-REQUIRES=[
-    'pytz==2013.9',
-    'requests>=2.3.0',
-    'tzlocal==1.1.1'
-]
 
-#data_files = []
-#data_files.append(credentials())
+data_files = []
+data_files.append(credentials())
 setup(
-    name='rackspace-cloudbackup-client',
+    name='rackspace-backup-client',
     version=parse_version(),
-    author='Alejandro Cabrera, Benjamen Meyer',
+    author='Alejandro Cabrera',
     license='Apache License (2.0)',
     keywords='rackspace, Cloud Backup, client',
-    author_email='CloudBackup@rackspace.com',
+    author_email='alejandro.cabrera@rackspace.com',
     description='A Python client for the Rackspace Cloud Backup API.',
     long_description=open('README.rst').read(),
     url='https://github.com/rackerlabs/python-cloudbackup-sdk',
     packages=find_packages(),
     zip_safe=False,
-    install_requires=REQUIRES,
+    install_requires=file_lines(pip_requires),
     include_package_data=True,
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -58,8 +53,7 @@ setup(
         'Intended Audience :: System Administrators',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: Implementation :: CPython'
     ],
-    data_files=[]
+    data_files=data_files
 )
