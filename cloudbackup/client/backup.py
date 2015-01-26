@@ -709,6 +709,8 @@ class Backups(Command):
             self.body = json.dumps(backupinfo.Configuration)
             res = requests.post(self.Uri, headers=self.Headers, data=self.Body)
             if res.status_code is 200:
+                ret = res.json()
+                backupinfo.ConfigurationId = ret['BackupConfigurationId']
                 return True
             else:
                 self.log.error('status code: %d', res.status_code)
