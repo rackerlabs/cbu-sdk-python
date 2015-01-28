@@ -36,7 +36,7 @@ REQUIRES=[
 #data_files = []
 #data_files.append(credentials())
 setup(
-    name='rackspace-cloudbackup-client',
+    name='python-cloudbackup-sdk',
     version=parse_version(),
     author='Alejandro Cabrera, Benjamen Meyer',
     license='Apache License (2.0)',
