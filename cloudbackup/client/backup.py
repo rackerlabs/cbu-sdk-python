@@ -803,13 +803,24 @@ class Backups(Command):
         self.log.info('snapshot ID: %s', self.snapshot_id)
         return self.snapshot_id
 
+    def GetBackupProgress(self, snapshot_id):
+        """
+        Get the progress of the backup for the given snapshot id
+        """
+        self.ReInit(self.sslenabled, "/v1.0/backup/" + str(snapshot_id))
+        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+        res = requests.get(self.Uri, headers=self.Headers)
+        if (res.status_code != 200):
+            self.log.warn('status code: %d', res.status_code)
+            self.log.error('reason: ' + res.reason)
+            raise RuntimeError('Get Backup Progress Failed - error code ({0:}) - {1:} - {2:}'.format(res.status_code, res.reason, res.text))
+        return res.json()
+
     def MonitorBackupProgress(self, snapshot_id, timeoutMilliseconds, pausePeriod=5.0):
         """
         Monitor the progress of the backup for the given snapshot id
         Timeout after timeoutMillseconds
         """
-        self.ReInit(self.sslenabled, "/v1.0/backup/" + str(snapshot_id))
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
         stoplist = ['Completed', 'Skipped', 'Missed', 'Stopped', 'Failed', 'CompletedWithErrors']
         start_time = int(round(time.time() * 1000))
         # poll for n-minutes
@@ -817,12 +828,10 @@ class Backups(Command):
         while ((int(round(time.time() * 1000))) < finish_time):
             # pause for so we don't hit the API/Agent too hard
             sleep(pausePeriod)
-            res = requests.get(self.Uri, headers=self.Headers)
-            if (res.status_code != 200):
-                self.log.warn('status code: %d', res.status_code)
-                self.log.error('reason: ' + res.reason)
+            try:
+                status_data = self.GetBackupProgress(snapshot_id)
+            except RuntimeError as e:
                 continue
-            status_data = res.json()
             self.log.info('Backup ID: %s', status_data['BackupId'])
             self.log.info('  Current state: %s', status_data['CurrentState'])
             self.log.info('  Backup configuration ID: %s', status_data['BackupConfigurationId'])
