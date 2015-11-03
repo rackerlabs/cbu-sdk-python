@@ -445,7 +445,7 @@ class Authentication(Command):
             for service in self.auth_data['access']['serviceCatalog']:
                 if service['name'] == 'cloudBackup':
                     for endpoint in service['endpoints']:
-                        if endpoint['region'] == dc:
+                        if endpoint['region'].lower() == dc.lower():
                             if useServiceNet:
                                 dcuri = endpoint['internalURL']
                             else:
