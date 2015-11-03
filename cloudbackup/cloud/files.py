@@ -20,7 +20,7 @@ class CloudFiles(Command):
         """
         Setup the CloudFiles API Class in the same manner as cloudbackup.common.Command
         """
-        super(self.__class__, self).__init__(self, sslenabled, 'localhost', '/')
+        super(self.__class__, self).__init__(sslenabled, 'localhost', '/')
         # save the ssl status for the various reinits done for each API call supported
         self.sslenabled = sslenabled
         self.authenticator = authenticator
@@ -408,6 +408,7 @@ class CloudFiles(Command):
                 automatically decompressed, e.g decompress = True
         """
         self.apihost = self._get_container(container)
+        file_chunk_size = 4 * 1024 * 1024
         try:
             self.ReInit(self.sslenabled, '/' + vaultdb_data['name'])
             self.headers['X-Auth-Token'] = self.authenticator.AuthToken
@@ -432,7 +433,7 @@ class CloudFiles(Command):
                 meter['bytes-remaining'] = int(res.headers['Content-Length'])
                 meter['bar-count'] = 50
                 meter['bytes-per-bar'] = meter['bytes-remaining'] // meter['bar-count']
-                meter['block-size'] = min(4 * 1024 * 1024, meter['bytes-per-bar'])
+                meter['block-size'] = min(file_chunk_size, meter['bytes-per-bar'])
                 meter['chunks-per-bar'] = meter['bytes-per-bar'] // meter['block-size']
                 meter['chunks'] = 0
                 meter['bars-remaining'] = meter['bar-count']
@@ -468,7 +469,7 @@ class CloudFiles(Command):
                     with open(localpath, 'wb') as db_file:
                         decompress_continue_loop = True
                         while decompress_continue_loop:
-                            filechunk = gz_db_file.read(1024)
+                            filechunk = gz_db_file.read(file_chunk_size)
                             if len(filechunk) == 0:
                                 decompress_continue_loop = False
                             else:
@@ -515,6 +516,7 @@ class CloudFiles(Command):
             - 'upload-compressed-bytes' - the number of bytes for the compressed file sent to Cloud Files
         """
         self.apihost = self._get_container(container)
+        file_chunk_size = 4 * 1024 * 1024
         try:
             md5_hash = hashlib.md5()
             gzip_file = None
@@ -527,7 +529,7 @@ class CloudFiles(Command):
                     with gzip.open(gzip_file, 'wb') as gz_db_file:
                         compress_continue_loop = True
                         while compress_continue_loop:
-                            filechunk = db_file.read(1024)
+                            filechunk = db_file.read(file_chunk_size)
                             if len(filechunk) == 0:
                                 compress_continue_loop = False
                             else:
@@ -536,7 +538,7 @@ class CloudFiles(Command):
                 else:
                     uncompressed_continue_loop = True
                     while uncompressed_continue_loop:
-                        filechunk = db_file.read(1024)
+                        filechunk = db_file.read(file_chunk_size)
                         if len(filechunk) == 0:
                             break
                         else:
@@ -560,7 +562,7 @@ class CloudFiles(Command):
             with open(gzip_file, 'rb') as compressed_data:
                 md5_continue_loop = True
                 while md5_continue_loop:
-                    filechunk = compressed_data.read(1024)
+                    filechunk = compressed_data.read(file_chunk_size)
                     if len(filechunk) == 0:
                         break
                     else:
