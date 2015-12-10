@@ -9,6 +9,8 @@ import time
 
 from cloudbackup.common.command import Command
 
+requests.packages.urllib3.disable_warnings()
+
 
 class AuthenticationError(Exception):
     pass
