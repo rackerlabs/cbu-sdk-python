@@ -1120,6 +1120,50 @@ class Agents(Command):
             self.log.error('Unable to retrieve agent details for agent id ' + str(machine_agent_id) + ' system return code ' + str(res.status_code) + ' reason = ' + res.reason)
             return False
 
+    def GetAgentsFromApi(self):
+        """
+        Lookup the associated agents and return a list of their IDs
+        """
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/user/agents')
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                result_list = []
+                results = res.json()
+                for agent in results:
+                    result_list.append(agent['MachineAgentId'])
+                return result_list
+
+            else:
+                self.log.error('Unable to retrieve agent list system return code ' + str(res.status_code) + ' reason = ' + res.reason)
+                return []
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents'.format(
+                            self.api_version,
+                            self.project_id
+                        ))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                result_list = []
+                results = res.json()
+                for agent in results['agents']:
+                    result_list.append(agent['id'])
+                return result_list
+
+            else:
+                self.log.error('Unable to retrieve agent list system return code ' + str(res.status_code) + ' reason = ' + res.reason)
+                return []
+
+
     @property
     def GetAgentIds(self):
         """
@@ -1300,7 +1344,6 @@ class Agents(Command):
                     if cloud_server_id:
                         if entry['host']['machine']['id'] == cloud_server_id:
                             agentlist.append(entry)
-                                agentlist.append(agent)
                             continue
 
                     if cloud_server_name:
@@ -1348,7 +1391,7 @@ class Agents(Command):
             else:
                 self.log.error('Unable to remove agent id ' + str(machine_agent_id) + ' system return code ' + str(res.status_code) + ' Reason: ' + res.reason)
                 return False
-            else:
+        else:
             self.ReInit(self.sslenabled,
                         '/v{0}/{1}/agents/{2}'.format(self.api_version,
                                                       self.project_id,
