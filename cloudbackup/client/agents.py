@@ -238,9 +238,9 @@ class AgentLogLevel(Command):
                 o['LoggingLevelid'] = levels[level]
             else:
                 o['LoggingLevelid'] = level
-    
+
             self.body = json.dumps(o)
-    
+
             res = requests.put(self.Uri, headers=self.Headers, data=self.Body)
         else:
             # TODO: Need to rework this whole function
@@ -1294,7 +1294,7 @@ class Agents(Command):
                                                str(agent))
                                 agentlist.append(agent)
                                 continue
-    
+
                         if (cloud_server_ips is not None and
                                 'IPAddress' in agent):
                             self.log.debug(
@@ -1306,13 +1306,13 @@ class Agents(Command):
                                                str(agent))
                                 agentlist.append(agent)
                                 continue
-    
+
                 except LookupError:
                     self.log.error('Unable to retrieve all agents from the '
                                    'returned agent list')
                     self.log.error('system response: ' + res.text)
                     self.log.error('system reason: ' + res.reason)
-    
+
                 return agentlist
             else:
                 if cloud_server_name is not None:

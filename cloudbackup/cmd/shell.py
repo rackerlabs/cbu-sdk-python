@@ -4,12 +4,14 @@ from __future__ import print_function
 import argparse
 import json
 import logging
+import random
 import sys
 
 import six
 
 import cloudbackup.client.agents
 import cloudbackup.client.auth
+import cloudbackup.client.backup
 import cloudbackup.utils.menus
 
 class CloudBackupApiShellException(Exception):
@@ -88,6 +90,14 @@ class CloudBackupApiShell(object):
         # TODO: Add support for Test/Pre-Prod API
 
         self.agents = cloudbackup.client.agents.Agents(
+            True,  # use HTTPS
+            self.auth_engine,
+            self.api['uri'],
+            self.api['version'],
+            self.auth_engine.AuthTenantId
+        )
+
+        self.backup_engine = cloudbackup.client.backup.Backups(
             True,  # use HTTPS
             self.auth_engine,
             self.api['uri'],
@@ -181,7 +191,7 @@ class CloudBackupApiShell(object):
             )
 
             if weekday['type'] == 'day':
-                return weekday['type']
+                return weekday['text']
 
             elif weekday['type'] == 'returnToPrevious':
                 print('Aborting')
@@ -271,9 +281,9 @@ class CloudBackupApiShell(object):
 
         if not user_aborted:
             retention_menu = [
-                { 'index': 0, 'text': 'Indefinite', 'type': 'retention' },
+                { 'index': 0, 'text': 'Indefinite', 'type': 'retention', 'r': 0 },
                 { 'index': 1, 'text': '30 Day', 'type': 'retention', 'r': 30 },
-                { 'index': 2, 'text': '60 Day', 'type': 'retention' },
+                { 'index': 2, 'text': '60 Day', 'type': 'retention', 'r': 60 },
                 { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
             ]
             selection = cloudbackup.utils.menus.promptSelection(
@@ -282,7 +292,7 @@ class CloudBackupApiShell(object):
             )
 
             if selection['type'] == 'retention':
-                retention = selection['text']
+                retention = selection['r']
 
             elif selection['type'] == 'returnToPrevious':
                 print('Aborting')
@@ -390,9 +400,10 @@ class CloudBackupApiShell(object):
                 ]
                 li = 0
                 for fileOrFolder in files_and_folders:
+                    item_name, item_type = fileOrFolder
                     files_and_folders_menu.append({
                         'index': len(files_and_folders_menu),
-                        'text': fileOrFolder,
+                        'text': '{0} - {1}'.format(item_name, item_type),
                         'type': 'fileOrFolder',
                         'li': li
                     })
@@ -400,8 +411,13 @@ class CloudBackupApiShell(object):
 
                 files_and_folders_menu.append({
                     'index': len(files_and_folders_menu),
-                    'text': 'Add File or Folder',
-                    'type': 'addFileOrFolder'
+                    'text': 'Add File',
+                    'type': 'addFile'
+                })
+                files_and_folders_menu.append({
+                    'index': len(files_and_folders_menu),
+                    'text': 'Add Folder',
+                    'type': 'addFolder'
                 })
                 files_and_folders_menu.append({
                     'index': len(files_and_folders_menu),
@@ -435,13 +451,21 @@ class CloudBackupApiShell(object):
                     else:
                         break
 
-                elif selection['type'] == 'addFileOrFolder':
+                elif selection['type'] == 'addFile':
                     fileOrFolderToAdd = cloudbackup.utils.menus.promptUserInputString(
-                        'File or Folder Path',
+                        'File Path',
                         '',
                     )
                     if not fileOrFolderToAdd is None:
-                        files_and_folders.append(fileOrFolderToAdd)
+                        files_and_folders.append((fileOrFolderToAdd, 'file'))
+
+                elif selection['type'] == 'addFolder':
+                    fileOrFolderToAdd = cloudbackup.utils.menus.promptUserInputString(
+                        'Folder Path',
+                        '',
+                    )
+                    if not fileOrFolderToAdd is None:
+                        files_and_folders.append((fileOrFolderToAdd, 'folder'))
 
                 elif selection['type'] == 'fileOrFolder':
                     removeFileOrFolder = cloudbackup.utils.menus.promptYesNoCancel(
@@ -451,7 +475,7 @@ class CloudBackupApiShell(object):
                     if removeFileOrFolder == 'Yes':
                         try:
                             list_index = selection['li']
-                            if files_and_folders[list_index] == selection['text']:
+                            if files_and_folders[list_index][0] == selection['text']:
                                 del files_and_folders[list_index]
                         except:
                             print('Error while removing File or Folder Path from list')
@@ -459,10 +483,100 @@ class CloudBackupApiShell(object):
         return files_and_folders
 
     def doCreateV1BackupConfiguration(self, active_agent_id, config_data):
-        print('TODO: Make v1 configuration')
+        DayOfWeekMapping = {
+            'Sunday': 0,
+            'Monday': 1,
+            'Tuesday': 2,
+            'Wednesday': 3,
+            'Thursday': 4,
+            'Friday': 5,
+            'Saturday': 6
+        }
+
+        backup_config = cloudbackup.client.backup.BackupConfiguration()
+        backup_config.ConfigurationName = config_data['name']
+        backup_config.MachineAgentId = int(active_agent_id)
+        backup_config.Active = True
+        backup_config.VersionRetention = config_data['retention']
+        backup_config.Frequency = config_data['schedule']['frequency']
+        backup_config.StartTimeHour = config_data['schedule']['start-time']['hour']
+        backup_config.StartTimeMinute = config_data['schedule']['start-time']['minute']
+        backup_config.StartTimeAmPm = config_data['schedule']['start-time']['am-pm']
+        if not config_data['schedule']['day-of-week'] is None:
+            backup_config.DayOfWeekId = DayOfWeekMapping[
+                config_data['schedule']['day-of-week']
+            ]
+        else:
+            backup_config.DayOfWeekId = None
+        backup_config.HourInterval = config_data['schedule']['hourly-interval']
+        backup_config.TimeZoneId = config_data['schedule']['start-time']['timezone']
+        backup_config.NotifyRecipients = config_data['notifications']['e-mail-addresses'][0]
+        backup_config.NotifySuccess = config_data['notifications']['success']
+        backup_config.NotifyFailure = config_data['notifications']['failure']
+        for item_name, item_type in config_data['paths']['inclusions']:
+            if item_type == 'file':
+                backup_config.AddFile(item_name, excluded=False)
+            else:
+                backup_config.AddFolder(item_name, excluded=False)
+        for item_name, item_type in config_data['paths']['exclusions']:
+            if item_type == 'file':
+                backup_config.AddFile(item_name, excluded=True)
+            else:
+                backup_config.AddFolder(item_name, excluded=True)
+        if not self.backup_engine.CreateBackupConfiguration(
+                backup_config):
+            print('Failed to create backup configuration. See logs for details')
+
+
 
     def doCreateV2BackupConfiguration(self, active_agent_id, config_data):
-        print('TODO: Make v2 configuration')
+        DayOfWeekMapping = {
+            'Sunday': 0,
+            'Monday': 1,
+            'Tuesday': 2,
+            'Wednesday': 3,
+            'Thursday': 4,
+            'Friday': 5,
+            'Saturday': 6
+        }
+
+        backup_config = cloudbackup.client.backup.BackupConfigurationV2()
+
+        #random.seed()
+        #backup_config.ConfigurationId = random.randint(100, 10000)
+        backup_config.ConfigurationId = None
+        backup_config.ConfigurationName = config_data['name']
+        backup_config.MachineAgentId = active_agent_id
+        backup_config.Active = True
+        backup_config.VersionRetention = config_data['retention']
+        backup_config.Frequency = config_data['schedule']['frequency']
+        backup_config.StartTimeHour = config_data['schedule']['start-time']['hour']
+        backup_config.StartTimeMinute = config_data['schedule']['start-time']['minute']
+        backup_config.StartTimeAmPm = config_data['schedule']['start-time']['am-pm']
+        if not config_data['schedule']['day-of-week'] is None:
+            backup_config.DayOfWeekId = DayOfWeekMapping[
+                config_data['schedule']['day-of-week']
+            ]
+        else:
+            backup_config.DayOfWeekId = None
+        backup_config.HourInterval = config_data['schedule']['hourly-interval']
+        backup_config.TimeZoneId = config_data['schedule']['start-time']['timezone']
+        backup_config.NotifyRecipients = config_data['notifications']['e-mail-addresses'][0]
+        backup_config.NotifySuccess = config_data['notifications']['success']
+        backup_config.NotifyFailure = config_data['notifications']['failure']
+        for item_name, item_type in config_data['paths']['inclusions']:
+            if item_type == 'file':
+                backup_config.AddFile(item_name, excluded=False)
+            else:
+                backup_config.AddFolder(item_name, excluded=False)
+        for item_name, item_type in config_data['paths']['exclusions']:
+            if item_type == 'file':
+                backup_config.AddFile(item_name, excluded=True)
+            else:
+                backup_config.AddFolder(item_name, excluded=True)
+        if not self.backup_engine.CreateBackupConfiguration(
+                backup_config):
+            print('Failed to create backup configuration. See logs for details')
 
     def doCreateBackupConfiguration(self, active_agent_id):
         def check_user_aborted(value):
@@ -494,7 +608,6 @@ class CloudBackupApiShell(object):
         }
         user_aborted = False
 
-        # Prompt: Name
         prompted_config_data['name'] = CloudBackupApiShell.doPromptBackConfigurationName(
             user_aborted
         )

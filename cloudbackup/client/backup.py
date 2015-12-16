@@ -1090,6 +1090,7 @@ class Backups(Command):
                 self.headers['X-Auth-Token'] = self.authenticator.AuthToken
                 self.headers['Content-Type'] = 'application/json'
                 self.body = json.dumps(backupinfo.Configuration)
+                self.log.debug('sending: {0}'.format(self.body))
                 res = requests.post(self.Uri, headers=self.Headers,
                                     data=self.Body)
                 if res.status_code is 200:
@@ -1108,6 +1109,7 @@ class Backups(Command):
                 self.headers['X-Auth-Token'] = self.authenticator.AuthToken
                 self.headers['X-Project-Id'] = self.project_id
                 self.body = json.dumps(backupinfo.Configuration)
+                self.log.debug('sending: {0}'.format(self.body))
                 res = requests.post(self.Uri, headers=self.Headers,
                                     data=self.Body)
                 if res.status_code is 201:
