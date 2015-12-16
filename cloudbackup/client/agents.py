@@ -708,7 +708,6 @@ class AgentConfiguration(object):
         if self.version == 1:
             return self.Rse['Polling']
         else:
-            # TODO: Verify this return value
             return self._configuration['system_preferences']['events']['rse']['polling']
 
     @property
@@ -716,7 +715,6 @@ class AgentConfiguration(object):
         if self.version == 1:
             return self.Rse['Heartbeat']
         else:
-            # TODO: Verify this return value
             return self._configuration['system_preferences']['events']['rse']['heartbeat']
 
     def GetBackupIds(self):
