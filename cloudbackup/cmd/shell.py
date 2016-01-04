@@ -577,6 +577,19 @@ class CloudBackupApiShell(object):
             'Saturday': 6
         }
 
+        if config_data['schedule']['start-time']['hour'] is not None:
+            # Convert the Hour to 24-hour format
+            config_data['schedule']['start-time']['hour'] = (
+                config_data['schedule']['start-time']['hour']
+                - 1
+            )
+            if config_data['schedule']['start-time']['am-pm'] == 'PM':
+                # Convert from AM to PM
+                config_data['schedule']['start-time']['hour'] = (
+                    config_data['schedule']['start-time']['hour']
+                    + 12
+                )
+
         backup_config = cloudbackup.client.backup.BackupConfigurationV2()
 
         #random.seed()
@@ -587,9 +600,9 @@ class CloudBackupApiShell(object):
         backup_config.Active = True
         backup_config.VersionRetention = config_data['retention']
         backup_config.Frequency = config_data['schedule']['frequency']
+
         backup_config.StartTimeHour = config_data['schedule']['start-time']['hour']
         backup_config.StartTimeMinute = config_data['schedule']['start-time']['minute']
-        backup_config.StartTimeAmPm = config_data['schedule']['start-time']['am-pm']
         if not config_data['schedule']['day-of-week'] is None:
             backup_config.DayOfWeekId = DayOfWeekMapping[
                 config_data['schedule']['day-of-week']

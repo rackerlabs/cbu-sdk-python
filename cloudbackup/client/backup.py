@@ -722,25 +722,35 @@ class BackupConfigurationV2(object):
 
     def _generate_schedule_string(self):
 
-        schedule_string = 'RRULE:'
-        if self.schedule['frequency']:
-            schedule_string += 'FREQ={0};'.format(self.schedule['frequency'])
-        schedule_string += 'INTERVAL={0}'.format(self.schedule['interval'])
-        if self.schedule['weekday']:
-            schedule_string += ';BYDAY={0}'.format(
-                    self.schedule['weekday'])
-        if self.schedule['start_hour']:
-            schedule_string += ';BYHOUR={0}'.format(
-                    self.schedule['start_hour'])
-        if self.schedule['start_minute']:
-            schedule_string += ';BYMINUTE={0}'.format(
-                    self.schedule['start_minute'])
-        self.backup_config['schedule'] = {'recurrence': [schedule_string],
-                'time_zone': self.schedule['time_zone']}
+        if self.schedule['frequency'] == 'MANUALLY':
+            self.backup_config['schedule'] = None
+
+        else:
+            schedule_string = 'RRULE:'
+            if self.schedule['frequency']:
+                schedule_string += 'FREQ={0};'.format(self.schedule['frequency'])
+
+            schedule_string += 'INTERVAL={0}'.format(self.schedule['interval'])
+
+            if self.schedule['weekday']:
+                schedule_string += ';BYDAY={0}'.format(
+                        self.schedule['weekday'])
+
+            if self.schedule['start_hour']:
+                schedule_string += ';BYHOUR={0}'.format(
+                        self.schedule['start_hour'])
+
+            if self.schedule['start_minute']:
+                schedule_string += ';BYMINUTE={0}'.format(
+                        self.schedule['start_minute'])
+
+            self.backup_config['schedule'] = {'recurrence': [schedule_string],
+                    'time_zone': self.schedule['time_zone']}
 
     @property
     def to_dict(self):
         """
+        Return the object as a dictionary
         """
         return self.backup_config
 
@@ -857,7 +867,7 @@ class BackupConfigurationV2(object):
 
         if not isinstance(frequency, types.StringTypes):
             raise TypeError('frequency is not a StringType')
-        valid_values = ('HOURLY', 'DAILY', 'WEEKLY')
+        valid_values = ('MANUALLY', 'HOURLY', 'DAILY', 'WEEKLY')
         frequency = frequency.upper()
         if frequency in valid_values:
             self.schedule['frequency'] = frequency
@@ -887,16 +897,6 @@ class BackupConfigurationV2(object):
 
         self.schedule['start_minute'] = minute
         self._generate_schedule_string()
-
-    @property
-    def StartTimeAmPm(self):
-        # TODO(jc7998)
-        raise Exception('Not Implemented')
-
-    @StartTimeAmPm.setter
-    def StartTimeAmPm(self, AmPm):
-        # TODO(jc7998)
-        raise Exception('Not Implemented')
 
     @property
     def DayOfWeekId(self):
