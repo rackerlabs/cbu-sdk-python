@@ -141,7 +141,7 @@ class CloudBackupApiShell(object):
         return name
 
     @staticmethod
-    def doPromptFrequency(user_aborted=False):
+    def doPromptFrequency(api_version, user_aborted=False):
         data = {
             'frequency': None,
             'dayOfWeek': None,
@@ -242,9 +242,9 @@ class CloudBackupApiShell(object):
                         data['StartTime']['amOrPm'] = amPmSelection['text']
 
                         valid_keys = []
-                        if self.api['version'] == 1:
+                        if api_version == 1:
                             valid_keys = tz.get_v1_timezone_name_list()
-                        elif self.api['version'] == 2:
+                        elif api_version == 2:
                             valid_keys = tz.get_v2_timezone_name_list()
                         else:
                             print('Unknown Cloud Backup API Version. Assuming V2 or later...')
@@ -297,6 +297,9 @@ class CloudBackupApiShell(object):
 
                 if data['interval'] is None:
                     user_aborted = True
+            else:
+                # TODO: Prompt for how often to run non-hourly intervals
+                data['interval'] = 1
 
         if not user_aborted:
             return data
@@ -568,13 +571,13 @@ class CloudBackupApiShell(object):
 
     def doCreateV2BackupConfiguration(self, active_agent_id, config_data):
         DayOfWeekMapping = {
-            'Sunday': 0,
-            'Monday': 1,
-            'Tuesday': 2,
-            'Wednesday': 3,
-            'Thursday': 4,
-            'Friday': 5,
-            'Saturday': 6
+            'Sunday': 'SU',
+            'Monday': 'MO',
+            'Tuesday': 'TU',
+            'Wednesday': 'WE',
+            'Thursday': 'TH',
+            'Friday': 'FR',
+            'Saturday': 'SA'
         }
 
         if config_data['schedule']['start-time']['hour'] is not None:
@@ -609,7 +612,10 @@ class CloudBackupApiShell(object):
             ]
         else:
             backup_config.DayOfWeekId = None
-        backup_config.HourInterval = config_data['schedule']['hourly-interval']
+
+        # Note: This will either be 1 or the hourly frequency
+        backup_config.Interval = config_data['schedule']['hourly-interval']
+
         backup_config.TimeZoneId = config_data['schedule']['start-time']['timezone']
         backup_config.NotifyRecipients = config_data['notifications']['e-mail-addresses'][0]
         backup_config.NotifySuccess = config_data['notifications']['success']
@@ -666,6 +672,7 @@ class CloudBackupApiShell(object):
         user_aborted = check_user_aborted(prompted_config_data['name'])
 
         frequency_data = CloudBackupApiShell.doPromptFrequency(
+            self.api['version'],
             user_aborted
         )
         user_aborted = check_user_aborted(frequency_data)
@@ -951,8 +958,8 @@ class CloudBackupApiShell(object):
             elif selection['type'] == 'configuration':
                 self.doPrintBackupConfigurationDetails(
                     active_agent_id,
-                    backup_id,
-                    backup_name
+                    selection['id'],
+                    selection['name']
                 )
 
 

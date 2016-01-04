@@ -910,14 +910,12 @@ class BackupConfigurationV2(object):
         self._generate_schedule_string()
 
     @property
-    def HourInterval(self):
-
+    def Interval(self):
         return self.schedule['interval']
 
-    @HourInterval.setter
-    def HourInterval(self, hourinterval):
-
-        self.schedule['interval'] = hourinterval
+    @Interval.setter
+    def Interval(self, interval):
+        self.schedule['interval'] = interval
         self._generate_schedule_string()
 
     @property
