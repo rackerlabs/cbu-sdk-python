@@ -13,6 +13,7 @@ import cloudbackup.client.agents
 import cloudbackup.client.auth
 import cloudbackup.client.backup
 import cloudbackup.utils.menus
+from cloudbackup.utils import tz
 
 class CloudBackupApiShellException(Exception):
     pass
@@ -155,7 +156,7 @@ class CloudBackupApiShell(object):
 
         def promptBaseRate():
             base_rate_menu = [
-                { 'index': 0, 'text': 'Manual', 'type': 'frequency' },
+                { 'index': 0, 'text': 'Manually', 'type': 'frequency' },
                 { 'index': 1, 'text': 'Hourly', 'type': 'frequency' },
                 { 'index': 2, 'text': 'Daily', 'type': 'frequency' },
                 { 'index': 3, 'text': 'Weekly', 'type': 'frequency' },
@@ -239,14 +240,41 @@ class CloudBackupApiShell(object):
 
                     else:
                         data['StartTime']['amOrPm'] = amPmSelection['text']
-                        data['StartTime']['timeZone'] = cloudbackup.utils.menus.promptUserInputString(
-                            'Windows Time Zone Name',
-                            ''
+
+                        valid_keys = []
+                        if self.api['version'] == 1:
+                            valid_keys = tz.get_v1_timezone_name_list()
+                        elif self.api['version'] == 2:
+                            valid_keys = tz.get_v2_timezone_name_list()
+                        else:
+                            print('Unknown Cloud Backup API Version. Assuming V2 or later...')
+                            valid_keys = tz.get_v2_timezone_name_list()
+
+                        tz_menu = [
+                        ]
+                        for tz_name in valid_keys:
+                            tz_menu.append({
+                                'index': len(tz_menu),
+                                'text': tz_name,
+                                'type': 'timezone_name'
+                            })
+                        tz_menu.append({
+                            'index': len(tz_menu),
+                            'text': 'Cancel',
+                            'type': 'returnToPrevious'
+                        })
+
+                        tz_selection = cloudbackup.utils.menus.promptSelection(
+                            tz_menu,
+                            'Time Zone Selection'
                         )
 
-                        if data['StartTime']['timeZone'] is None:
+                        if tz_selection['type'] == 'returnToPrevious':
                             print('Aborting')
                             user_aborted = True
+
+                        elif tz_selection['type'] == 'timezone_name':
+                            data['StartTime']['timeZone'] = tz_selection['text']
 
         if not user_aborted:
             data['frequency'] = promptBaseRate()
@@ -494,6 +522,10 @@ class CloudBackupApiShell(object):
         }
 
         backup_config = cloudbackup.client.backup.BackupConfiguration()
+        print(type(backup_config))
+        print(dir(backup_config))
+        assert(hasattr(backup_config, 'dict_source'))
+
         backup_config.ConfigurationName = config_data['name']
         backup_config.MachineAgentId = int(active_agent_id)
         backup_config.Active = True
@@ -509,7 +541,12 @@ class CloudBackupApiShell(object):
         else:
             backup_config.DayOfWeekId = None
         backup_config.HourInterval = config_data['schedule']['hourly-interval']
-        backup_config.TimeZoneId = config_data['schedule']['start-time']['timezone']
+        if config_data['schedule']['start-time']['timezone'] is not None:
+            backup_config.TimeZoneId = config_data['schedule']['start-time']['timezone']
+        else:
+            backup_config.TimeZoneId = tz.get_timezone(
+                self.api['version'] == 1
+            )
         backup_config.NotifyRecipients = config_data['notifications']['e-mail-addresses'][0]
         backup_config.NotifySuccess = config_data['notifications']['success']
         backup_config.NotifyFailure = config_data['notifications']['failure']
@@ -591,7 +628,9 @@ class CloudBackupApiShell(object):
                     'hour': None,
                     'minute': None,
                     'am-pm': None,
-                    'timezone': None
+                    'timezone': tz.get_timezone(
+                        self.api['version'] == 1
+                    )
                 },
                 'hourly-interval': None
             },

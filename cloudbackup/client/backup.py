@@ -80,6 +80,7 @@ class BackupConfiguration(object):
         self.log = logging.getLogger(__name__)
         self.backup_config = BackupConfiguration.CreateBackupConfigurationTemplate()
         self.from_dict = None
+        self.dict_source = None
 
     @classmethod
     def from_dict(cls, config, source):
@@ -132,6 +133,9 @@ class BackupConfiguration(object):
                 keys_to_copy = ['BackupConfigurationName', 'Exclusions', 'Inclusions']
 
             elif source == 'backup-configuration':
+                # Guarantee we know where the data come from, even if not specified
+                rbc.source = 'backup-configuration'
+
                 rbc.Active = rbc.from_dict['IsActive']
                 rbc.ConfigurationId = rbc.from_dict['BackupConfigurationId']
                 rbc.ConfigurationName = rbc.from_dict['BackupConfigurationName']
@@ -192,7 +196,7 @@ class BackupConfiguration(object):
 
         keys_to_remove = []
 
-        if self.dict_source == 'agent-configuration':
+        if self.dict_source in (None, 'agent-configuration'):
             keys_to_remove = ['BackupConfigurationId',
                               'BackupConfigurationScheduled']
 
@@ -218,7 +222,7 @@ class BackupConfiguration(object):
 
         keys_to_remove = []
 
-        if self.dict_source == 'agent-configuration':
+        if self.dict_source in (None, 'agent-configuration'):
             keys_to_remove = ['BackupConfigurationId',
                               'BackupConfigurationScheduled']
 
@@ -1083,46 +1087,46 @@ class Backups(Command):
         Create a backup configuration
           backupinfo is an instance of cloudbackup.client.backup.BackupConfiguration
         """
-        if isinstance(backupinfo, BackupConfiguration) or \
-                isinstance(backupinfo, BackupConfigurationV2):
-            if self.api_version == 1:
-                self.ReInit(self.sslenabled, '/v1.0/backup-configuration')
-                self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-                self.headers['Content-Type'] = 'application/json'
-                self.body = json.dumps(backupinfo.Configuration)
-                self.log.debug('sending: {0}'.format(self.body))
-                res = requests.post(self.Uri, headers=self.Headers,
-                                    data=self.Body)
-                if res.status_code is 200:
-                    ret = res.json()
-                    backupinfo.ConfigurationId = ret['BackupConfigurationId']
-                    return True
-                else:
-                    self.log.error('status code: %d', res.status_code)
-                    self.log.error('reason: ' + res.reason)
-                    self.log.error('error info: %s', res.text)
-                    return False
+        if self.api_version == 1 and isinstance(backupinfo, BackupConfiguration):
+            self.ReInit(self.sslenabled, '/v1.0/backup-configuration')
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json'
+            self.body = json.dumps(backupinfo.to_creation_dict)
+            self.log.debug('sending: {0}'.format(self.body))
+            res = requests.post(self.Uri, headers=self.Headers,
+                                data=self.Body)
+            if res.status_code is 200:
+                ret = res.json()
+                backupinfo.ConfigurationId = ret['BackupConfigurationId']
+                return True
             else:
-                self.ReInit(self.sslenabled,
-                            '/v{0}/{1}/configurations'.format(
-                                self.api_version, self.project_id))
-                self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-                self.headers['X-Project-Id'] = self.project_id
-                self.body = json.dumps(backupinfo.Configuration)
-                self.log.debug('sending: {0}'.format(self.body))
-                res = requests.post(self.Uri, headers=self.Headers,
-                                    data=self.Body)
-                if res.status_code is 201:
-                    resp_body = res.json()
-                    self.configuration_id = resp_body['id']
-                    return True
-                else:
-                    self.log.error('status code: %d', res.status_code)
-                    self.log.error('reason: ' + res.reason)
-                    self.log.error('error info: %s', res.text)
-                    return False
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return False
+        elif self.api_version == 2 and isinstance(backupinfo, BackupConfigurationV2):
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/configurations'.format(
+                            self.api_version, self.project_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['X-Project-Id'] = self.project_id
+            self.body = json.dumps(backupinfo.Configuration)
+            self.log.debug('sending: {0}'.format(self.body))
+            res = requests.post(self.Uri, headers=self.Headers,
+                                data=self.Body)
+            if res.status_code is 201:
+                resp_body = res.json()
+                self.configuration_id = resp_body['id']
+                return True
+            else:
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return False
         else:
-            raise TypeError('backup info is not an instance of BackupConfiguration')
+            raise TypeError('backup info is either not an instance of BackupConfiguration '
+                'or not an appropriate instance for the API version'
+            )
 
     def RetrieveBackupConfiguration(self, backup_config_id):
         """
