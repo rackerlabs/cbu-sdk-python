@@ -34,7 +34,11 @@ def promptSelection(menu, prompt, prefix=''):
             else:
                 selection = int(input('{0:}: '.format(prompt)))
 
-            return getMenuEntry(menu, selection)
+            menu_entry = getMenuEntry(menu, selection)
+            if menu_entry is not None:
+                return menu_entry
+            else:
+                print('Invalid Selection. Try again.')
 
         except Exception as ex:
             print('Invalid selection')
