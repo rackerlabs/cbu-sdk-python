@@ -4,13 +4,7 @@ Cloud Backup API Python SDK
 
 :version: 0.20.0
 :Presentations: `Introduction`_
-.. image:: https://requires.io/github/cabrera/python-cloudbackup-sdk/requirements.png?branch=master
-   :target: https://requires.io/github/cabrera/python-cloudbackup-sdk/requirements/?branch=master
-   :alt: Requirements Status
-.. image:: https://travis-ci.org/cabrera/python-cloudbackup-sdk.png?branch=master
-   :target: https://travis-ci.org/cabrera/python-cloudbackup-sdk
-   :alt: TravisCI Status
- 
+
 Welcome to the Python bindings to the Rackspace Cloud Backup
 API. These bindings will help you make the most of the Cloud Backup
 system and integrate it into your workflows.
@@ -68,8 +62,8 @@ Some simple guidelines:
 
 For more details, checkout the `Contributing`_ guide.
 
-If you have any questions, please check in with Alejandro Cabrera
-<alejandro.cabrera@rackspace.com>.
+If you have any questions, please check in with Benjamen Meyer
+<ben.meyer@rackspace.com>.
 
 .. _backup_config.json: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/examples/create_a_backup/backup_config.json
 .. _Contributing: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/CONTRIBUTING.rst
