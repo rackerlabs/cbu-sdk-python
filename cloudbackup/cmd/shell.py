@@ -586,12 +586,17 @@ class CloudBackupApiShell(object):
                 config_data['schedule']['start-time']['hour']
                 - 1
             )
+
             if config_data['schedule']['start-time']['am-pm'] == 'PM':
                 # Convert from AM to PM
                 config_data['schedule']['start-time']['hour'] = (
                     config_data['schedule']['start-time']['hour']
                     + 12
                 )
+
+            elif int(config_data['schedule']['start-time']['hour'] == 12:
+                # 24-hour format, midnight is 0:00:00.000->0:59:59.999
+                config_data['schedule']['start-time']['hour'] = 0
 
         backup_config = cloudbackup.client.backup.BackupConfigurationV2()
 

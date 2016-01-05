@@ -485,7 +485,8 @@ class AgentDetails(object):
         """
         if self.version == 1:
             return self._details['Status']
-        # TODO: API v2 does not return status like this
+        # TODO: API v2 provides http://docs.cloudbackupapi.apiary.io/#reference/agents/v2agentsidstatus/get-an-agent's-status
+        #       to get a real-time status of the agent
 
     @property
     def TimeOfLastSuccessfulBackup(self):
@@ -494,7 +495,10 @@ class AgentDetails(object):
         """
         if self.version == 1:
             return self._details['TimeOfLastSuccessfulBackup']
-        # TODO: API v2 does not return info like this
+        # TODO: API v2 provides this a little differently:
+        #       First call http://docs.cloudbackupapi.apiary.io/#reference/configurations/v2configurationsid/get-details-about-a-configuration
+        #       to get the last time a given configuration was backed up, then retrieve the details via
+        #       http://docs.cloudbackupapi.apiary.io/#reference/backups/v2backupsid/get-details-about-a-backup to find the time of that backup
 
     @property
     def DateTimeOfLastSuccessfulBackup(self):
