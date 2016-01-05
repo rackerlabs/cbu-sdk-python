@@ -39,9 +39,9 @@ def get_timezone(WindowsZoneName=True):
 
 def get_v1_timezone_name_list():
     # Return the Microsoft Windows Time Zone Names
-    return tzlocal.windows_tz.win_tz.keys()
+    return sorted(tzlocal.windows_tz.win_tz.keys())
 
 
 def get_v2_timezone_name_list():
     # Return the Olsen Time Zone Names
-    return tzlocal.windows_tz.tz_win.keys()
+    return sorted(tzlocal.windows_tz.tz_win.keys())

@@ -200,6 +200,42 @@ class CloudBackupApiShell(object):
                 user_aborted = True
                 return None
 
+        def promptTimeZone():
+            valid_keys = []
+            if api_version == 1:
+                valid_keys = tz.get_v1_timezone_name_list()
+            elif api_version == 2:
+                valid_keys = tz.get_v2_timezone_name_list()
+            else:
+                print('Unknown Cloud Backup API Version. Assuming V2 or later...')
+                valid_keys = tz.get_v2_timezone_name_list()
+
+            tz_menu = [
+            ]
+            for tz_name in valid_keys:
+                tz_menu.append({
+                    'index': len(tz_menu),
+                    'text': tz_name,
+                        'type': 'timezone_name'
+                    })
+            tz_menu.append({
+                'index': len(tz_menu),
+                'text': 'Cancel',
+                'type': 'returnToPrevious'
+            })
+
+            tz_selection = cloudbackup.utils.menus.promptSelection(
+                tz_menu,
+                'Time Zone Selection'
+            )
+
+            if tz_selection['type'] == 'returnToPrevious':
+                print('Aborting')
+                user_aborted = True
+
+            elif tz_selection['type'] == 'timezone_name':
+                data['StartTime']['timeZone'] = tz_selection['text']
+
         def promptStartTime():
             data['StartTime']['hour'] = cloudbackup.utils.menus.promptUserInputNumber(
                 'Hour',
@@ -241,41 +277,9 @@ class CloudBackupApiShell(object):
 
                     else:
                         data['StartTime']['amOrPm'] = amPmSelection['text']
+                        
+                        promptTimeZone()
 
-                        valid_keys = []
-                        if api_version == 1:
-                            valid_keys = tz.get_v1_timezone_name_list()
-                        elif api_version == 2:
-                            valid_keys = tz.get_v2_timezone_name_list()
-                        else:
-                            print('Unknown Cloud Backup API Version. Assuming V2 or later...')
-                            valid_keys = tz.get_v2_timezone_name_list()
-
-                        tz_menu = [
-                        ]
-                        for tz_name in valid_keys:
-                            tz_menu.append({
-                                'index': len(tz_menu),
-                                'text': tz_name,
-                                'type': 'timezone_name'
-                            })
-                        tz_menu.append({
-                            'index': len(tz_menu),
-                            'text': 'Cancel',
-                            'type': 'returnToPrevious'
-                        })
-
-                        tz_selection = cloudbackup.utils.menus.promptSelection(
-                            tz_menu,
-                            'Time Zone Selection'
-                        )
-
-                        if tz_selection['type'] == 'returnToPrevious':
-                            print('Aborting')
-                            user_aborted = True
-
-                        elif tz_selection['type'] == 'timezone_name':
-                            data['StartTime']['timeZone'] = tz_selection['text']
 
         if not user_aborted:
             data['frequency'] = promptBaseRate()
@@ -298,6 +302,10 @@ class CloudBackupApiShell(object):
 
                 if data['interval'] is None:
                     user_aborted = True
+
+                else:
+                    promptTimeZone()
+
             else:
                 # TODO: Prompt for how often to run non-hourly intervals
                 data['interval'] = 1
