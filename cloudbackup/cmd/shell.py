@@ -552,7 +552,8 @@ class CloudBackupApiShell(object):
             ]
         else:
             backup_config.DayOfWeekId = None
-        backup_config.HourInterval = config_data['schedule']['hourly-interval']
+        if config_data['schedule']['frequency'] == 'HOURLY':
+            backup_config.HourInterval = config_data['schedule']['hourly-interval']
         if config_data['schedule']['start-time']['timezone'] is not None:
             backup_config.TimeZoneId = config_data['schedule']['start-time']['timezone']
         else:
