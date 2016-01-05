@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import json
 import logging
+import logging.config
 import random
 import sys
 
@@ -594,7 +595,7 @@ class CloudBackupApiShell(object):
                     + 12
                 )
 
-            elif int(config_data['schedule']['start-time']['hour'] == 12:
+            elif int(config_data['schedule']['start-time']['hour']) == 12:
                 # 24-hour format, midnight is 0:00:00.000->0:59:59.999
                 config_data['schedule']['start-time']['hour'] = 0
 
