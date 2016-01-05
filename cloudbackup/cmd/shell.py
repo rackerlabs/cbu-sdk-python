@@ -773,13 +773,13 @@ class CloudBackupApiShell(object):
             print('\t\t\tDay Of Week: {0}'.format(schedule['DayOfWeek']))
             print('\t\t\tHourly Interval: {0}'.format(schedule['HourlyInterval']))
             print('\t\t\tTime of Day: {0}'.format(schedule['TimeOfDay']))
-        print('\t\tIncluded Files and Folders:')
+        print('\t\t Included Files and Folders:')
         for inclusion in backup_config['Inclusions']:
             print('\t\t\tType: {0}'.format(inclusion['Type']))
             print('\t\t\tPattern: {0}'.format(inclusion['Pattern']))
             print('\t\t\tModule: {0}'.format(inclusion['Module']))
             print('\t\t\tArgs: {0}'.format(inclusion['Args']))
-        print('\t\tExcluded Files and Folders:')
+        print('\t\t Excluded Files and Folders:')
         for exclusion in backup_config['Exclusions']:
             print('\t\t\tType: {0}'.format(exclusion['Type']))
             print('\t\t\tPattern: {0}'.format(exclusion['Pattern']))
@@ -789,10 +789,36 @@ class CloudBackupApiShell(object):
 
     def doPrintBackupConfigurationV2Details(self, active_agent_id, backup_config):
         print('Agent Configuration:')
-        print('\tAgent ID: {0}'.format(active_agent_id))
-        print('\t\t ID: {0}'.format(backup_config['id']))
-        print('\t\t Name: {0}'.format(backup_config['name']))
-        print('\t\t Config: {0}'.format(backup_config))
+        try:
+            print('\tAgent ID: {0}'.format(active_agent_id))
+            print('\t\t ID: {0}'.format(backup_config['id']))
+            print('\t\t Name: {0}'.format(backup_config['name']))
+            print('\t\t Enabled: {0}'.format(backup_config['enabled']))
+            print('\t\t Vault ID: {0}'.format(backup_config['vault_id']))
+            print('\t\t Data Retention:')
+            print('\t\t\tPeriod: {0}'.format(backup_config['retention']['days']))
+            print('\t\t Schedule: ')
+            if backup_config['schedule'] is not None:
+                print('\t\t\t Start: {0}'.format(backup_config['schedule']['start']))
+                print('\t\t\t Time Zone: {0}'.format(backup_config['schedule']['time_zone']))
+                print('\t\t\t Recurrence Rule(s):')
+                for recurrence_rule in backup_config['schedule']['recurrence']:
+                    print('\t\t\t\t{0}'.format(recurrence_rule))
+                print('\t\t\t Next Backup Time: {0}'.format(backup_config['backups']['next']['scheduled_time']))
+            else:
+                print('\t\t\t Manual Backup')
+            print('\t\t Included Files and Folders:')
+            for inclusion in backup_config['inclusions']:
+                print('\t\t\tType: {0}'.format(inclusion['type']))
+                print('\t\t\tPath: {0}'.format(inclusion['path']))
+            print('\t\t Excluded Files and Folders:')
+            for exclusion in backup_config['inclusions']:
+                print('\t\t\tType: {0}'.format(exclusion['type']))
+                print('\t\t\tPath: {0}'.format(exclusion['path']))
+        except:
+            print('Error while decoding data.')
+            print('RAW Backup Config: {0}'.format(backup_config))
+            raise
         print('\n')
 
     def doPrintBackupConfigurationDetails(self, active_agent_id, backup_id, backup_name):
