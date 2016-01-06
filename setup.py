@@ -61,5 +61,10 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: Implementation :: CPython'
     ],
-    data_files=[]
+    data_files=[],
+    entry_points={
+        'console_scripts': [
+            'cloudbackup-shell = cloudbackup.cmd.shell:main'
+        ]
+    }
 )

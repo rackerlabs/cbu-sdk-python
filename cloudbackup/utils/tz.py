@@ -36,3 +36,12 @@ def get_timezone(WindowsZoneName=True):
                 return 'Unknown'
         else:
             return olsen_name
+
+def get_v1_timezone_name_list():
+    # Return the Microsoft Windows Time Zone Names
+    return sorted(tzlocal.windows_tz.win_tz.keys())
+
+
+def get_v2_timezone_name_list():
+    # Return the Olsen Time Zone Names
+    return sorted(tzlocal.windows_tz.tz_win.keys())

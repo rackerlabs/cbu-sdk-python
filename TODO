@@ -2,5 +2,6 @@ TODO
 ====
 
 - Look at converting cloudbackup.client.auth over to a wrapper around Keystone Client
-- Add Unit Tests
-- Pep8 Compliance
+- Add Unit Tests using StackInABox, OpenStackInABox, and our own v2 API StackInABox Services
+- PEP-8 Compliance
+- Enabled Travis-CI, ReadTheDocs, and coveralls.io

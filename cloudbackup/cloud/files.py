@@ -10,6 +10,8 @@ import time
 
 from cloudbackup.common.command import Command
 
+requests.packages.urllib3.disable_warnings()
+
 
 class CloudFiles(Command):
     """
@@ -45,7 +47,7 @@ class CloudFiles(Command):
         """
         self.apihost = self._get_container(uri)
         urioptions = '?format=json'
-        if limit is not -1:
+        if not limit is -1:
             urioptions += '&limit=%d' % limit
         if len(marker):
             urioptions += '&marker=%s' % marker
@@ -76,7 +78,7 @@ class CloudFiles(Command):
         """
         self.apihost = self._get_container(uri)
         urioptions = '/' + container + '?format=json'
-        if limit is not -1:
+        if not limit is -1:
             urioptions += '&limit=%d' % limit
         if len(marker):
             urioptions += '&marker=%s' % marker

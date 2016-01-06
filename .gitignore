@@ -5,7 +5,11 @@ cloudbackup/cover
 coverage.xml
 nosetests.xml
 rackspace_cloudbackup_client.egg-info/
+python_cloudbackup_sdk.egg-info/
 *.pyc
 *__pycache__*
 
 *.swp
+.*.log
+
+env*/

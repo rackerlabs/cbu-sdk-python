@@ -11,6 +11,8 @@ import cloudbackup.client.auth
 import cloudbackup.client.agents
 from cloudbackup.common.command import Command
 
+requests.packages.urllib3.disable_warnings()
+
 
 class RseData(object):
     """
@@ -27,7 +29,7 @@ class RseData(object):
         self.app = app
         self.appVersion = appVersion
         # UUID needs to change with every app version. uuid.uuid5 gives us an easy way to do that
-        self.uuid = uuid.uuid5(uuid.NAMESPACE_URL, ('support-tools.cloudbackup.rackspace.com/' + self.app + '/' + self.appVersion))
+        self.uuid = uuid.uuid5(uuid.NAMESPACE_URL, ('python.sdk.cloudbackup.rackspace.com/' + self.app + '/' + self.appVersion))
         # Build the User Agent expected by RSE
         # IT MUST HAVE 3 SECTIONS DELIMITED BY '/'
         # SECTION 1 MAY BE ANY NAME
@@ -70,7 +72,8 @@ class Rse(Command):
     Object defining HTTP REST API calls for interacting with Rackspace RSE
     """
 
-    def __init__(self, app, appversion, authenticator, agent, agentkey, logfile=None, apihost=None):
+    def __init__(self, app, appversion, authenticator, agent, agentkey,
+                 logfile=None, apihost=None, api_version=1, project_id=None):
         """
         Initialize the Rse access
           app - the application name to use with Rse
@@ -91,6 +94,8 @@ class Rse(Command):
         self.agentkey = agentkey
         self.rselogfile = logfile
         self.apihost = apihost
+        self.api_version = api_version
+        self.project_id = project_id
 
     def RseInitDirect(self, machine_agent_id):
         """
@@ -114,7 +119,14 @@ class Rse(Command):
 
         Note: Indirectly interacts with RSE via the API
         """
-        self.ReInit(self.sslenabled, '/v1.0/agent/events/' + str(machine_agent_id))
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/agent/events/{0}'.format(machine_agent_id))
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}/events/'.format(
+                            self.api_version, self.project_id,
+                            machine_agent_id))
         self.headers['X-Auth-Token'] = self.authenticator.AuthToken
 
     def RseInit(self, machine_agent_id):
@@ -134,7 +146,7 @@ class Rse(Command):
         """
         res = requests.get(self.Uri, headers=self.Headers)
         self.log.debug('RSE Query: Code (%s)', res.status_code)
-        if self.rselogfile is not None:
+        if not self.rselogfile is None:
             with open(self.rselogfile, 'a') as out:
                 out.write('=======================================================================\n')
                 out.write('Time: ' + time.strftime('%Y-%m-%d %H:%M:%S %Z') + '\n')
@@ -169,18 +181,23 @@ class Rse(Command):
                 # Find the heart beat messages and determine if there is one
                 # for the specified agent
                 for event in rsemsg['events']:
-                    if self.rselogfile is not None:
+                    if not self.rselogfile is None:
                         with open(self.rselogfile, 'a') as out:
                             out.write('(RSE) Message: ')
                             out.write(str(event))
                             out.write('\n+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n')
-                    if event['data']['Event'] == 'Heartbeat':
-                        if event['data']['MachineAgentId'] == machine_agent_id and event['age'] < 26:
+                    if self.api_version == 1:
+                        if event['data']['Event'] == 'Heartbeat':
+                            if (event['data']['MachineAgentId'] == 
+                                    machine_agent_id and event['age'] < 26):
+                                return True
+                    else:
+                        if event['event'] in ('heartbeat', 'agent_heartbeat'):
                             return True
                 return False
             else:
                 for event in rsemsg:
-                    if self.rselogfile is not None:
+                    if not self.rselogfile is None:
                         with open(self.rselogfile, 'a') as out:
                             out.write('(API) Message: ')
                             out.write(str(event))

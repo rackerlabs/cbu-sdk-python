@@ -12,6 +12,8 @@ import threading
 
 from cloudbackup.common.command import Command
 
+requests.packages.urllib3.disable_warnings()
+
 
 class ParameterError(Exception):
     """
@@ -21,7 +23,12 @@ class ParameterError(Exception):
 
 
 # function for Agents class to use to keep a given agent awake
-def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None, rse_app=None, rse_version=None, rse_agentkey=None, rse_log=None, rse_apihost=None, rse_period=None, apihost=None, agent_id=None):
+def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None,
+                               rse_app=None, rse_version=None,
+                               rse_agentkey=None, rse_log=None,
+                               rse_apihost=None, rse_period=None, apihost=None,
+                               agent_id=None, api_version=None,
+                               project_id=None):
     """
     (Internal) Thread function that will periodically post the wake agent message and look for the specified agent
     Aside from my_notifier, the function maintains its own objects internally in thread local data storage for thread-safety purposes
@@ -53,7 +60,9 @@ def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None, rse_app
     data.thread_id = threading.current_thread().ident
     data.log_prefix = 'RSE Wakeup Thread[{0:}] Log'.format(data.thread_id)
     data.auth_engine = cloudbackup.client.auth.Authentication(user, apikey)
-    data.agent_engine = cloudbackup.client.agents.Agents(True, data.auth_engine, apihost)
+    data.agent_engine = cloudbackup.client.agents.Agents(True, data.auth_engine,
+                                                         apihost, api_version,
+                                                         project_id)
     data.logfile = None
     if rse_log is not None:
         data.logfile = '{0:}.thread_{1:}'.format(rse_log, data.thread_id)
@@ -62,7 +71,12 @@ def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None, rse_app
     log.debug('{0:}: Agent Id - {1:}'.format(data.log_prefix, agent_id))
     log.debug('{0:}: RSE Period - {1:}'.format(data.log_prefix, rse_period))
 
-    data.rse_engine = cloudbackup.client.rse.Rse(rse_app, rse_version, data.auth_engine, data.agent_engine, rse_agentkey, logfile=data.logfile, apihost=rse_apihost)
+    data.rse_engine = cloudbackup.client.rse.Rse(rse_app, rse_version,
+                                                 data.auth_engine, data.agent_engine,
+                                                 rse_agentkey, logfile=data.logfile,
+                                                 apihost=rse_apihost,
+                                                 api_version=api_version,
+                                                 project_id=project_id)
 
     def __check_notifier(notifier):
         """
@@ -125,7 +139,7 @@ class AgentLogLevel(Command):
     """
     Object controlling the log levels for agents
     """
-    def __init__(self, sslenabled, authenticator, apihost):
+    def __init__(self, sslenabled, authenticator, apihost, api_version, project_id):
         super(self.__class__, self).__init__(sslenabled, apihost, '/')
         self.log = logging.getLogger(__name__)
 
@@ -133,6 +147,12 @@ class AgentLogLevel(Command):
         self.sslenabled = sslenabled
         self.authenticator = authenticator
         self.loglevel = {}
+
+        if type(api_version) is int:
+            self.api_version = api_version
+        else:
+            self.api_version = 1
+        self.project_id = project_id
 
     def __del__(self):
         try:
@@ -156,13 +176,26 @@ class AgentLogLevel(Command):
             Trace
             All
         """
-        self.ReInit(self.sslenabled, "/v1.0/agent/logging/" + str(machine_agent_id))
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/agent/logging/{0}'.format(machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}'.format(self.api_version,
+                                                      self.project_id,
+                                                      machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
         res = requests.get(self.Uri, headers=self.Headers)
         if res.status_code == 200:
-            # the text will be data like "Warn" (with quotes) so remove the quotes.
-            return res.text.replace('"', '')
+            if self.api_version == 1:
+                # the text will be data like "Warn" (with quotes) so remove the quotes.
+                return res.text.replace('"', '')
+            else:
+                return res.json()['log_level']
         else:
             self.log.error('Unable to retrieve agent log level for machine agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
             return ''
@@ -182,32 +215,50 @@ class AgentLogLevel(Command):
 
         'level' may also be a numeric value inclusively between 1 and 7.
         """
-        if level not in ('Fatal', 'Error', 'Warn', 'Info', 'Debug', 'Trace', 'All', 1, 2, 3, 4, 5, 6, 7):
-            raise ValueError('Log Level (' + str(level) + ') is not valid.')
+        if self.api_version == 1:
+            if not level in ('Fatal', 'Error', 'Warn', 'Info', 'Debug', 'Trace', 'All', 1, 2, 3, 4, 5, 6, 7):
+                raise ValueError('Log Level (' + str(level) + ') is not valid.')
 
-        self.ReInit(self.sslenabled, "/v1.0/agent/logging")
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
-        o = {}
-        o['MachineAgentId'] = machine_agent_id
+            self.ReInit(self.sslenabled, "/v1.0/agent/logging")
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            o = {}
+            o['MachineAgentId'] = machine_agent_id
 
-        levels = {
-            'Fatal': 1,
-            'Error': 2,
-            'Warn': 3,
-            'Info': 4,
-            'Debug': 5,
-            'Trace': 6,
-            'All': 7
-        }
-        if level in levels:
-            o['LoggingLevelid'] = levels[level]
+            levels = {
+                'Fatal': 1,
+                'Error': 2,
+                'Warn': 3,
+                'Info': 4,
+                'Debug': 5,
+                'Trace': 6,
+                'All': 7
+            }
+            if level in levels:
+                o['LoggingLevelid'] = levels[level]
+            else:
+                o['LoggingLevelid'] = level
+
+            self.body = json.dumps(o)
+
+            res = requests.put(self.Uri, headers=self.Headers, data=self.Body)
         else:
-            o['LoggingLevelid'] = level
-
-        self.body = json.dumps(o)
-
-        res = requests.put(self.Uri, headers=self.Headers, data=self.Body)
+            # TODO: Need to rework this whole function
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}'.format(self.api_version,
+                                                      self.project_id,
+                                                      machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+            o = {}
+            o['op'] = 'replace'
+            o['path'] = '/log_level'
+            o['value'] = level.lower()
+            l = []
+            l.append(o)
+            self.body = json.dumps(l)
+            res = requests.patch(self.Uri, headers=self.Headers, data=self.Body)
         if res.status_code == 204:
             return True
         else:
@@ -222,7 +273,7 @@ class AgentLogLevel(Command):
 
         Note: Log Levels are stored as a Stack. Use PopLogLevel() to restore the log level to the value prior to calling PushLogLevel().
         """
-        if machine_agent_id not in self.loglevel:
+        if not machine_agent_id in self.loglevel:
             self.loglevel[machine_agent_id] = list()
         current = self.GetLogLevel(machine_agent_id)
         self.loglevel[machine_agent_id].append(current)
@@ -268,10 +319,15 @@ class AgentDetails(object):
     Object describing a given Agent instance described by the Agent Details API Endpoint
     """
 
-    def __init__(self, details):
-        # Verify the details are at least what we expect before doing anything else
-        for prop in ('MachineAgentId', 'AgentVersion', 'Architecture', 'Flavor', 'BackupVaultSize', 'CleanupAllowed', 'Datacenter', 'IPAddress', 'IsDisabled', 'IsEncrypted', 'MachineName', 'OperatingSystem', 'OperatingSystemVersion', 'PublicKey', 'Status', 'TimeOfLastSuccessfulBackup', 'UseServiceNet', 'HostServerId'):
-            details[prop]
+    def __init__(self, details, version):
+
+        # TODO: Replace this verification and use JSON Schema
+        self.version = version
+        if self.version == 1:
+            # Verify the details are at least what we expect before doing anything else
+            for prop in ('MachineAgentId', 'AgentVersion', 'Architecture', 'Flavor', 'BackupVaultSize', 'CleanupAllowed', 'Datacenter', 'IPAddress', 'IsDisabled', 'IsEncrypted', 'MachineName', 'OperatingSystem', 'OperatingSystemVersion', 'PublicKey', 'Status', 'TimeOfLastSuccessfulBackup', 'UseServiceNet', 'HostServerId'):
+                x = details[prop]
+        # TODO: Add JSON Schema validation for API v2
 
         # Some cached data needed
         self._details = details
@@ -281,34 +337,47 @@ class AgentDetails(object):
         """
         Agent ID
         """
-        return self._details['MachineAgentId']
+        if self.version == 1:
+            return self._details['MachineAgentId']
+        else:
+            return self._details['id']
 
     @property
     def AgentVersion(self):
         """
         Agent Version
         """
-        return self._details['AgentVersion']
+        if self.version == 1:
+            return self._details['AgentVersion']
+        else:
+            return self._details['version']
 
     @property
     def Architecture(self):
         """
         System Architecture
         """
-        return self._details['Architecture']
+        if self.version == 1:
+            return self._details['Architecture']
+        else:
+            return self._details['host']['os']['architecture']
 
     @property
     def Flavor(self):
         """
         System Flavor
         """
-        return self._details['Flavor']
+        if self.version == 1:
+            return self._details['Flavor']
+        else:
+            return self._details['host']['flavor']
 
     @property
     def BackupVaultSize(self):
         """
         Current size of the Backup Vault
         """
+        # TODO: v2 does not have Backup Vault Size
         return self._details['BackupVaultSize']
 
     @property
@@ -316,6 +385,7 @@ class AgentDetails(object):
         """
         Can Cleanup the Vault?
         """
+        # TODO: v2 does not have CleanupAllowed
         return self._details['CleanupAllowed']
 
     @property
@@ -323,21 +393,32 @@ class AgentDetails(object):
         """
         Which Datacenter does the system live in?
         """
-        return self._details['Datacenter']
+        if self.version == 1:
+            return self._details['Datacenter']
+        else:
+            return self._details['host']['region']
 
     @property
     def IPAddress(self):
         """
         IP Address the agent registered with
         """
-        return self._details['IPAddress']
+        if self.version == 1:
+            return self._details['IPAddress']
+        else:
+            return next(address for address in
+                        self._details['host']['addresses']
+                        if address['version'] == 4)['addr']
 
     @property
     def IsDisabled(self):
         """
         Is the Agent Disabled?
         """
-        return self._details['IsDisabled']
+        if self.version == 1:
+            return self._details['IsDisabled']
+        else:
+            return not self._details['enabled']
 
     @property
     def IsEnabled(self):
@@ -351,49 +432,73 @@ class AgentDetails(object):
         """
         Are the backups encrypted?
         """
-        return self._details['IsEncrypted']
+        if self.version == 1:
+            return self._details['IsEncrypted']
+        else:
+            return self._details['vault']['encrypted']
 
     @property
     def MachineName(self):
         """
         System Name as registered with Cloud Servers (Nova)
         """
-        return self._details['MachineName']
+        if self.version == 1:
+            return self._details['MachineName']
+        else:
+            return self._details['name']
 
     @property
     def OperatingSystem(self):
         """
         System Operating System
         """
-        return self._details['OperatingSystem']
+        if self.version == 1:
+            return self._details['OperatingSystem']
+        else:
+            return self._details['host']['os']['name']
 
     @property
     def OperatingSystemVersion(self):
         """
         System Operating System Version
         """
-        return self._details['OperatingSystemVersion']
+        if self.version == 1:
+            return self._details['OperatingSystemVersion']
+        else:
+            return self._details['host']['os']['version']
 
     @property
     def PublicKey(self):
         """
         Public Key for encrypted backups
         """
-        return self._details['PublicKey']
+        if self.version == 1:
+            return self._details['PublicKey']
+        else:
+            # TODO: Content of rsa_public_key is a different from that of PublicKey. Is this function being used?
+            return self._details['rsa_public_key']
 
     @property
     def Status(self):
         """
         Agent Status
         """
-        return self._details['Status']
+        if self.version == 1:
+            return self._details['Status']
+        # TODO: API v2 provides http://docs.cloudbackupapi.apiary.io/#reference/agents/v2agentsidstatus/get-an-agent's-status
+        #       to get a real-time status of the agent
 
     @property
     def TimeOfLastSuccessfulBackup(self):
         """
         When was the agent last succcessful with its backup?
         """
-        return self._details['TimeOfLastSuccessfulBackup']
+        if self.version == 1:
+            return self._details['TimeOfLastSuccessfulBackup']
+        # TODO: API v2 provides this a little differently:
+        #       First call http://docs.cloudbackupapi.apiary.io/#reference/configurations/v2configurationsid/get-details-about-a-configuration
+        #       to get the last time a given configuration was backed up, then retrieve the details via
+        #       http://docs.cloudbackupapi.apiary.io/#reference/backups/v2backupsid/get-details-about-a-backup to find the time of that backup
 
     @property
     def DateTimeOfLastSuccessfulBackup(self):
@@ -410,14 +515,20 @@ class AgentDetails(object):
         """
         Use RAX ServiceNet?
         """
-        return self._details['UseServiceNet']
+        if self.version == 1:
+            return self._details['UseServiceNet']
+        else:
+            return self._details['vault']['use_internal']
 
     @property
     def HostServerId(self):
         """
         System Host Server Identifier for Cloud Servers (Nova)
         """
-        return self._details['HostServerId']
+        if self.version == 1:
+            return self._details['HostServerId']
+        else:
+            return self._details['host']['machine']['id']
 
 
 class AgentConfiguration(object):
@@ -425,10 +536,15 @@ class AgentConfiguration(object):
     Object describing the various Agent configurations
     """
 
-    def __init__(self, configuration):
-        # Verify the configurations are at least what we expect before doing anything else
-        for prop in ('Volumes', 'SystemPreferences', 'UserPreferences', 'BackupConfigurations'):
-            pass
+    def __init__(self, configuration, version):
+
+        # TODO: Replace this verification and use JSON Schema
+        self.version = version
+        if self.version == 1:
+            # Verify the configurations are at least what we expect before doing anything else
+            for prop in ('Volumes', 'SystemPreferences', 'UserPreferences', 'BackupConfigurations'):
+                x = configuration[prop]
+        # TODO: Add JSON Schema validation for API v2
 
         self.log = logging.getLogger(__name__)
 
@@ -445,7 +561,11 @@ class AgentConfiguration(object):
     # -> BackupVaultId
     @property
     def Volumes(self):
-        return self._configuration['Volumes']
+        if self.version == 1:
+            return self._configuration['Volumes']
+        else:
+            # TODO: This is not a one to one mapping. The key/values are different
+            return self._configuration['vaults']
 
     # SystemPreferences          See SystemPreferences
     # ->RateLimit
@@ -461,30 +581,50 @@ class AgentConfiguration(object):
     #   --> Level               See ConfigLogLevel()
     @property
     def SystemPreferences(self):
-        return self._configuration['SystemPreferences']
+        if self.version == 1:
+            return self._configuration['SystemPreferences']
+        else:
+            # TODO: This is not a one to one mapping. The key/values are different
+            return self._configuration['system_preferences']
 
     @property
     def ConfigLogLevel(self):
-        return self.SystemPreferences['Logging']['Level']
+        if self.version == 1:
+            return self.SystemPreferences['Logging']['Level']
+        else:
+            return self._configuration['system_preferences']['logging']['level']
 
     @property
     def MinimumBackupDiskSpaceMb(self):
-        return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Backup']
+        if self.version == 1:
+            return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Backup']
+        else:
+            return self._configuration['system_preferences']['environment']['minimum_disk_space_mb']['backup']
 
     @property
     def MinimumRestoreDiskSpaceMb(self):
-        return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Restore']
+        if self.version == 1:
+            return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Restore']
+        else:
+            return self._configuration['system_preferences']['environment']['minimum_disk_space_mb']['restore']
 
     @property
     def MinimumCleanupDiskSpaceMb(self):
-        return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Cleanup']
+        if self.version == 1:
+            return self.SystemPreferences['Environment']['MinimumDiskSpaceMb']['Cleanup']
+        else:
+            return self._configuration['system_preferences']['environment']['minimum_disk_space_mb']['cleanup']
 
     # UserPreferences
     # -> CacheDirectory
     # -> ThrottleBandwidth
     @property
     def UserPreferences(self):
-        return self._configuration['UserPreferences']
+        if self.version == 1:
+            return self._configuration['UserPreferences']
+        else:
+            # TODO: Need to look into the equivalent value/object
+            return None
 
     # BackupConfigurations[]   See GetBackupConfigurationById(), GetBackupConfigurationByName()
     # -> BackupPrescript
@@ -518,7 +658,11 @@ class AgentConfiguration(object):
     #   --> Args
     @property
     def BackupConfigurations(self):
-        return self._configuration['BackupConfigurations']
+        if self.version == 1:
+            return self._configuration['BackupConfigurations']
+        else:
+            # TODO: This is not a one to one mapping. The key/values are different
+            return self._configuration['configurations']
 
     # Rse                  See GetRse()
     # -> Channel          See GetRseChannel()
@@ -543,58 +687,94 @@ class AgentConfiguration(object):
     #     ---> RealTime
     @property
     def Rse(self):
-        return self.SystemPreferences['Rse']
+        if self.version == 1:
+            return self.SystemPreferences['Rse']
+        else:
+            # TODO: This is not a one to one mapping. The key/values are different
+            return self._configuration['system_preferences']['events']['rse']
 
     @property
     def RseChannel(self):
-        return self.Rse['Channel']
+        if self.version == 1:
+            return self.Rse['Channel']
+        else:
+            return self._configuration['system_preferences']['events']['rse']['channel']
 
     @property
     def RseHost(self):
-        return self.Rse['HostName']
+        if self.version == 1:
+            return self.Rse['HostName']
+        else:
+            return self._configuration['system_preferences']['events']['rse']['host']
 
     @property
     def RsePollingConfig(self):
-        return self.Rse['Polling']
+        if self.version == 1:
+            return self.Rse['Polling']
+        else:
+            return self._configuration['system_preferences']['events']['rse']['polling']
 
     @property
     def RseHeartbeatConfig(self):
-        return self.Rse['Heartbeat']
+        if self.version == 1:
+            return self.Rse['Heartbeat']
+        else:
+            return self._configuration['system_preferences']['events']['rse']['heartbeat']
 
     def GetBackupIds(self):
         """
         Retrieve the list of Backup Configuration Ids for the agent as reported by GetAgentConfiguration()
         """
+        if self.version == 1:
+            backup_id = 'Id'
+        else:
+            backup_id = 'id'
         backupids = set()
         for backupconfig in self.BackupConfigurations:
-            backupids.add(backupconfig['Id'])
+            backupids.add(backupconfig[backup_id])
         return backupids
 
     def GetBackupNames(self):
         """
         Retrieve the list of Backup Configuration Names for the agent as reported by GetAgentConfiguration()
         """
+        if self.version == 1:
+            backup_name = 'Name'
+        else:
+            backup_name = 'name'
         backupnames = set()
         for backupconfig in self.BackupConfigurations:
-            backupnames.add(backupconfig['Name'])
+            backupnames.add(backupconfig[backup_name])
         return backupnames
 
     def GetBackupNameIdMap(self):
         """
         Retrieve the list of Backup Configuration Names for the agent as reported by GetAgentConfiguration()
         """
+        if self.version == 1:
+            backup_name = 'Name'
+            backup_id = 'Id'
+        else:
+            backup_name = 'name'
+            backup_id = 'id'
         backupnamemap = {}
         for backupconfig in self.BackupConfigurations:
-            backupnamemap[backupconfig['Name']] = backupconfig['Id']
+            backupnamemap[backupconfig[backup_name]] = backupconfig[backup_id]
         return backupnamemap
 
     def GetBackupIdNameMap(self):
         """
         Retrieve the list of Backup Configuration Names for the agent as reported by GetAgentConfiguration()
         """
+        if self.version == 1:
+            backup_name = 'Name'
+            backup_id = 'Id'
+        else:
+            backup_name = 'name'
+            backup_id = 'id'
         backupidmap = {}
         for backupconfig in self.BackupConfigurations:
-            backupidmap[backupconfig['Id']] = backupconfig['Name']
+            backupidmap[backupconfig[backup_id]] = backupconfig[backup_name]
         return backupidmap
 
     def GetBackupIdFromName(self, backup_name):
@@ -619,62 +799,76 @@ class AgentConfiguration(object):
         """
         Retrieve the entire backup configuration for the agent given a backup id, data as reported by GetAgentConfiguration()
         """
-        backupconf = {}
-        for backupconfig in self.BackupConfigurations:
-            if backupconfig['Id'] == backup_id:
-                backupconf = backupconfig
-                break
-            else:
-                continue
-        return backupconf
+        if self.version == 1:
+            b_id = 'Id'
+        else:
+            b_id = 'id'
+        return next((backupconfig for backupconfig in self.BackupConfigurations if backupconfig[b_id] == backup_id), {})
 
     def GetBackupConfigurationByName(self, backup_name):
         """
         Retrieve the entire backup configuration for the agent given a backup id, data as reported by GetAgentConfiguration()
         """
-        backupconf = {}
-        for backupconfig in self.BackupConfigurations:
-            if backupconfig['Name'] == backup_name:
-                backupconf = backupconfig
-                break
-            else:
-                continue
-        return backupconf
+        if self.version == 1:
+            b_name = 'Name'
+        else:
+            b_name = 'name'
+        return next((backupconfig for backupconfig in self.BackupConfigurations if backupconfig[b_name] == backup_name), {})
 
     def GetVaultDbContainer(self, backup_name=None):
         """
         Retrieve the URI for the VaultDB, data as reported by GetAgentConfiguration()
         """
-        container = None
-        if backup_name is not None:
-            backupconfig = self.GetBackupConfigurationByName(backup_name)
-            container = backupconfig['VolumeUri']
+        if self.version == 1:
+            container = None
+            if backup_name is not None:
+                backupconfig = self.GetBackupConfigurationByName(backup_name)
+                container = backupconfig['VolumeUri']
+            else:
+                container = self.Volumes[0]['Uri']
+            self.log.debug('VaultDB Container: ' + container)
+            return container[6:]
         else:
-            container = self.Volumes[0]['Uri']
+            vault_info = self._configuration['vaults'][0]
+            if vault_info['use_internal']:
+                vault_url = next(url for url in vault_info['links']
+                                 if url['rel'] == 'internalURL')['href']
+            else:
+                vault_url = next(url for url in vault_info['links']
+                                 if url['rel'] == 'publicURL')['href']
+            self.log.debug('VaultDB Container: ' + vault_url)
+            # strip the https:// section
+            return vault_url[8:]
 
-        self.log.debug('VaultDB Container: ' + container)
-        return container[6:]
 
     def GetVaultDbPath(self, backup_name=None):
         """
         Retrieve the URI for the VaultDB, data as reported by GetAgentConfiguration()
         """
         try:
-            vaultvolume = {}
-            if backup_name is not None:
-                backupconfig = self.GetBackupConfigurationByName(backup_name)
-                volumeuri = backupconfig['VolumeUri']
-                # As there may be numerous volumes we match it up against the backup configuration we are looking for
-                # Don't know if there is a better way or not...but this will work for now
-                for volume in self.Volumes:
-                    if volume['Uri'] == volumeuri:
-                        vaultvolume = volume
-            else:
-                vaultvolume = self.Volumes[0]
+            if self.version == 1:
+                vaultvolume = {}
+                if backup_name is not None:
+                    backupconfig = self.GetBackupConfigurationByName(backup_name)
+                    volumeuri = backupconfig['VolumeUri']
+                    vaultvolume = {}
+                    # As there may be numerous volumes we match it up against the backup configuration we are looking for
+                    # Don't know if there is a better way or not...but this will work for now
+                    for volume in self.Volumes:
+                        if volume['Uri'] == volumeuri:
+                            vaultvolume = volume
+                else:
+                    vaultvolume = self.Volumes[0]
 
-            vaultdburi = 'BACKUPS/v2.0/' + vaultvolume['BackupVaultId']
-            self.log.debug('VaultDB Path: ' + vaultdburi)
-            return vaultdburi
+                vaultdburi = 'BACKUPS/v2.0/' + vaultvolume['BackupVaultId']
+                self.log.debug('VaultDB Path: ' + vaultdburi)
+                return vaultdburi
+            else:
+                backupconfig = self.GetBackupConfigurationByName(backup_name)
+                vault_id = backupconfig['vault_id']
+                vaultdburi = 'BACKUPS/v2.0/{0}'.format(vault_id)
+                self.log.debug('VaultDB Path: ' + vaultdburi)
+                return vaultdburi
         except LookupError:
             self.log.error('Unable to access the Volume URI. Did GetAgentConfiguration get called first?')
             return ''
@@ -686,17 +880,24 @@ class AgentConfiguration(object):
         Depends on GetAgentConfiguration() to have already been called
         """
         try:
-            backupconfig = self.GetBackupConfigurationByName(backup_name)
-            volumeuri = backupconfig['VolumeUri']
-            vaultvolume = {}
-            # As there may be numerous volumes we match it up against the backup configuration we are looking for
-            # Don't know if there is a better way or not...but this will work for now
-            for volume in self.Volumes:
-                if volume['Uri'] == volumeuri:
-                    vaultvolume = volume
-            vaultdburi = 'BACKUPS/v2.0/' + vaultvolume['BackupVaultId'] + '/BUNDLES/' + '{0:010}'.format(bundle_id)
-            self.log.debug('VaultDB Path: ' + vaultdburi)
-            return vaultdburi
+            if self.version == 1:
+                backupconfig = self.GetBackupConfigurationByName(backup_name)
+                volumeuri = backupconfig['VolumeUri']
+                vaultvolume = {}
+                # As there may be numerous volumes we match it up against the backup configuration we are looking for
+                # Don't know if there is a better way or not...but this will work for now
+                for volume in self.Volumes:
+                    if volume['Uri'] == volumeuri:
+                        vaultvolume = volume
+                vaultdburi = 'BACKUPS/v2.0/' + vaultvolume['BackupVaultId'] + '/BUNDLES/' + '{0:010}'.format(bundle_id)
+                self.log.debug('VaultDB Path: ' + vaultdburi)
+                return vaultdburi
+            else:
+                vault_db_url = self.GetVaultDbPath(backup_name)
+                vaultdburi = vault_db_url + '/BUNDLES/' + \
+                        '{0:010}'.format(bundle_id)
+                self.log.debug('VaultDB Path: ' + vaultdburi)
+                return vaultdburi
         except LookupError:
             self.log.error('Unable to access the Volume URI. Did GetAgentConfiguration get called first?')
             return ''
@@ -708,12 +909,14 @@ class Agents(Command):
     Presently supports the RAX v1.0 API
     """
 
-    def __init__(self, sslenabled, authenticator, apihost):
+    def __init__(self, sslenabled, authenticator, apihost, api_version, project_id):
         """
         Initialize the Agent access
           sslenabled - True if using HTTPS; otherwise False
           authenticator - instance of cloudbackup.client.auth.Authentication to use
           apihost - server to use for API calls
+          api_version - version of the API
+          project_id - Project Id used by API v2
         """
         super(self.__class__, self).__init__(sslenabled, apihost, '/')
         self.log = logging.getLogger(__name__)
@@ -726,7 +929,15 @@ class Agents(Command):
         self.o = {}
         self.snapshot_id = -1
         self.wake_agent_threads = []
-        self.loglevel = AgentLogLevel(sslenabled, authenticator, apihost)
+        self.loglevel = AgentLogLevel(sslenabled, authenticator, apihost,
+                                      api_version, project_id)
+
+        if type(api_version) is int:
+            self.api_version = api_version
+        else:
+            self.api_version = 1
+
+        self.project_id = project_id
 
     def __del__(self):
         del self.loglevel
@@ -749,11 +960,25 @@ class Agents(Command):
 
         Note: This may require up to 60 seconds for the agents to respond.
         """
-        self.ReInit(self.sslenabled, "/v1.0/user/wakeupagents")
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.log.debug('headers: %s', self.Headers)
-        res = requests.post(self.Uri, headers=self.Headers)
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled, "/v1.0/user/wakeupagents")
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.log.debug('headers: %s', self.Headers)
+            res = requests.post(self.Uri, headers=self.Headers)
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/events'.format(self.api_version,
+                                                  self.project_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+            self.o = {}
+            self.o['event'] = 'agent_activate'
+            self.o['mode'] = 'active'
+            self.body = json.dumps(self.o)
+            self.log.debug('headers: %s', self.Headers)
+            res = requests.post(self.Uri, headers=self.Headers, data=self.Body)
         self.log.debug('Wake Agent: code = {0:}, reason = {1:}'.format(res.status_code, res.reason))
         return res.status_code
 
@@ -774,7 +999,11 @@ class Agents(Command):
         wakeup_status_code = 0
         while ((int(round(time.time() * 1000))) < finish_time):
             wakeup_status_code = self.WakeAgents()
-            if wakeup_status_code == 200:
+            if self.api_version == 1:
+                valid_code = 200
+            else:
+                valid_code = 202
+            if wakeup_status_code == valid_code:
                 wokeall = True
                 break
         if wokeall:
@@ -794,7 +1023,12 @@ class Agents(Command):
                     if wake_period is None:
                         rse_heartbeat_config = self.GetRseHeartbeatConfig(machine_agent_id)
                         self.log.debug('Rse config: {0:}'.format(rse_heartbeat_config))
-                        wake_period = rse_heartbeat_config['Timeout']['RealTime'] / 1000
+                        if self.api_version == 1:
+                            wake_period = (rse_heartbeat_config['Timeout']
+                                           ['RealTime'] / 1000)
+                        else:
+                            wake_period = (rse_heartbeat_config['timeout_ms']
+                                           ['real_time'] / 1000)
                         # create a buffer
                         if wake_period > 6:
                             wake_period = wake_period - 5
@@ -836,7 +1070,9 @@ class Agents(Command):
                                                               'rse_agentkey': rse.agentkey, 'rse_log': rse.rselogfile,
                                                               'rse_apihost': rse.apihost, 'rse_period': period,
                                                               'apihost': self.apihost, 'agent_id': machine_agent_id,
-                                                              'my_notifier': wake_agent_thread['terminator']})
+                                                              'my_notifier': wake_agent_thread['terminator'],
+                                                               'api_version': self.api_version,
+                                                               'project_id': self.project_id})
                 a_thread['thread'].start()
                 break
 
@@ -864,17 +1100,71 @@ class Agents(Command):
         Retrieve all the information regarding the specified Agent ID
         """
         self.agents = {}
-        self.ReInit(self.sslenabled, "/v1.0/agent/" + str(machine_agent_id))
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/agent/{0}'.format(machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}'.format(self.api_version,
+                                                      self.project_id,
+                                                      machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
         res = requests.get(self.Uri, headers=self.Headers)
         if res.status_code == 200:
             self.log.debug('Agent Details(id: {0:}) - {1:}'.format(machine_agent_id, res.json()))
-            self.agents[machine_agent_id] = AgentDetails(details=res.json())
+            self.agents[machine_agent_id] = AgentDetails(details=res.json(), version=self.api_version)
             return True
         else:
             self.log.error('Unable to retrieve agent details for agent id ' + str(machine_agent_id) + ' system return code ' + str(res.status_code) + ' reason = ' + res.reason)
             return False
+
+    def GetAgentsFromApi(self):
+        """
+        Lookup the associated agents and return a list of their IDs
+        """
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/user/agents')
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                result_list = []
+                results = res.json()
+                for agent in results:
+                    result_list.append(agent['MachineAgentId'])
+                return result_list
+
+            else:
+                self.log.error('Unable to retrieve agent list system return code ' + str(res.status_code) + ' reason = ' + res.reason)
+                return []
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents'.format(
+                            self.api_version,
+                            self.project_id
+                        ))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                result_list = []
+                results = res.json()
+                for agent in results['agents']:
+                    result_list.append(agent['id'])
+                return result_list
+
+            else:
+                self.log.error('Unable to retrieve agent list system return code ' + str(res.status_code) + ' reason = ' + res.reason)
+                return []
+
 
     @property
     def GetAgentIds(self):
@@ -901,12 +1191,25 @@ class Agents(Command):
         """
         Retrieve the Configuration for the given agent
         """
-        self.ReInit(self.sslenabled, "/v1.0/agent/configuration/" + str(machine_agent_id))
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/agent/configuration/{0}'.format(
+                            machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}/configuration'.format(
+                            self.api_version, self.project_id,
+                            machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
         res = requests.get(self.Uri, headers=self.Headers)
         if res.status_code == 200:
-            self.configurations[machine_agent_id] = AgentConfiguration(configuration=res.json())
+            self.configurations[machine_agent_id] = AgentConfiguration(
+                    configuration=res.json(), version=self.api_version)
             return True
         else:
             self.log.error('Unable to retrieve agent configuration for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
@@ -961,70 +1264,153 @@ class Agents(Command):
         if cloud_server_name is None and cloud_server_id is None and cloud_server_ips is None:
             raise ParameterError('Neither Cloud Server Name nor Cloud Server Id (HostServerId) nor Cloud Server IPs were specified. Unable to match a server.')
 
-        self.ReInit(self.sslenabled, "/v1.0/user/agents")
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
-        res = requests.get(self.Uri, headers=self.Headers)
-        if res.status_code == 200:
-            agentlist = list()
-            try:
-                usersagentlist = res.json()
-                for agent in usersagentlist:
-                    self.log.debug('Agent: ' + str(agent))
-                    if cloud_server_id is not None and 'HostServerId' in agent:
-                        self.log.debug('Checking Id Match: {0:} == {1:}'.format(cloud_server_id, agent['HostServerId']))
-                        if agent['HostServerId'] == cloud_server_id:
-                            self.log.debug('Id Matched: Adding ' + str(agent))
-                            agentlist.append(agent)
-                            continue
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled, "/v1.0/user/agents")
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                agentlist = list()
+                try:
+                    usersagentlist = res.json()
+                    for agent in usersagentlist:
+                        self.log.debug('Agent: ' + str(agent))
+                        if (cloud_server_id is not None and
+                                'HostServerId' in agent):
+                            self.log.debug(
+                                    'Checking Id Match: {0:} == {1:}'
+                                    .format(cloud_server_id,
+                                            agent['HostServerId']))
+                            if agent['HostServerId'] == cloud_server_id:
+                                self.log.debug('Id Matched: Adding ' +
+                                               str(agent))
+                                agentlist.append(agent)
+                                continue
 
-                    if cloud_server_name is not None and 'MachineName' in agent:
-                        self.log.debug('Checking Name Match: {0:} == {1:}'.format(cloud_server_name, agent['MachineName']))
-                        if agent['MachineName'] == cloud_server_name:
-                            self.log.debug('Name Matched: Adding ' + str(agent))
-                            agentlist.append(agent)
-                            continue
+                        if (cloud_server_name is not None and
+                                'MachineName' in agent):
+                            self.log.debug(
+                                    'Checking Name Match: {0:} == {1:}'
+                                    .format(cloud_server_name,
+                                            agent['MachineName']))
+                            if agent['MachineName'] == cloud_server_name:
+                                self.log.debug('Name Matched: Adding ' +
+                                               str(agent))
+                                agentlist.append(agent)
+                                continue
 
-                    if cloud_server_ips is not None and 'IPAddress' in agent:
-                        self.log.debug('Checking IP Match: {0:} in {1:}'.format(agent['IPAddress'], cloud_server_ips))
-                        if agent['IPAddress'] in cloud_server_ips:
-                            self.log.debug('IP Matched: Adding ' + str(agent))
-                            agentlist.append(agent)
-                            continue
+                        if (cloud_server_ips is not None and
+                                'IPAddress' in agent):
+                            self.log.debug(
+                                    'Checking IP Match: {0:} in {1:}'
+                                    .format(agent['IPAddress'],
+                                            cloud_server_ips))
+                            if agent['IPAddress'] in cloud_server_ips:
+                                self.log.debug('IP Matched: Adding ' +
+                                               str(agent))
+                                agentlist.append(agent)
+                                continue
 
-            except LookupError:
-                self.log.error('Unable to retrieve all agents from the returned agent list')
+                except LookupError:
+                    self.log.error('Unable to retrieve all agents from the '
+                                   'returned agent list')
+                    self.log.error('system response: ' + res.text)
+                    self.log.error('system reason: ' + res.reason)
+
+                return agentlist
+            else:
+                if cloud_server_name is not None:
+                    self.log.error('Unable to retrieve all agents for cloud '
+                                   'server (name: ' + cloud_server_name +
+                                   ') system return code ' +
+                                   str(res.status_code))
+                if cloud_server_id is not None:
+                    self.log.error('Unable to retrieve all agents for cloud '
+                                   'server (id: ' + cloud_server_id +
+                                   ') system return code ' +
+                                   str(res.status_code))
                 self.log.error('system response: ' + res.text)
                 self.log.error('system reason: ' + res.reason)
-
-            return agentlist
+                return list()
         else:
-            if cloud_server_name is not None:
-                self.log.error('Unable to retrieve all agents for cloud server (name: ' + cloud_server_name + ') system return code ' + str(res.status_code))
-            if cloud_server_id is not None:
-                self.log.error('Unable to retrieve all agents for cloud server (id: ' + cloud_server_id + ') system return code ' + str(res.status_code))
-            self.log.error('system response: ' + res.text)
-            self.log.error('system reason: ' + res.reason)
-            return list()
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents'.format(self.api_version,
+                                                  self.project_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                resp_body = res.json()
+                agentlist = list()
+                for entry in resp_body['agents']:
+                    if cloud_server_id:
+                        if entry['host']['machine']['id'] == cloud_server_id:
+                            agentlist.append(entry)
+                            continue
+
+                    if cloud_server_name:
+                        if entry['name'] == cloud_server_name:
+                            agentlist.append(entry)
+                            continue
+                    if cloud_server_ips:
+                        for address in entry['host']['addresses']:
+                            if address['addr'] in cloud_server_ips:
+                                agentlist.append(entry)
+                                continue
+                return agentlist
+            else:
+                if cloud_server_name is not None:
+                    self.log.error('Unable to retrieve all agents for cloud '
+                                   'server (name: ' + cloud_server_name +
+                                   ') system return code ' +
+                                   str(res.status_code))
+                if cloud_server_id is not None:
+                    self.log.error('Unable to retrieve all agents for cloud '
+                                   'server (id: ' + cloud_server_id +
+                                   ') system return code ' +
+                                   str(res.status_code))
+                self.log.error('system response: ' + res.text)
+                self.log.error('system reason: ' + res.reason)
+                return list()
+
 
     def RemoveAgent(self, machine_agent_id):
         """
         De-register the agent from the Rackspace Cloud Backup API
         """
-        self.ReInit(self.sslenabled, "/v1.0/agent/delete")
-        self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-        self.headers['Content-Type'] = 'application/json; charset=utf-8'
-        self.o = {}
-        self.o['MachineAgentId'] = machine_agent_id
-        self.body = json.dumps(self.o)
-        res = requests.post(self.Uri, headers=self.Headers, data=self.Body)
-        if res.status_code == 204:
-            self.log.info('Removed agent id ' + str(machine_agent_id))
-            self.log.warn('Please restart the process to lookup this agent again as the agent id may have changed.')
-            return True
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled, '/v1.0/agent/delete')
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.o = {}
+            self.o['MachineAgentId'] = machine_agent_id
+            self.body = json.dumps(self.o)
+            res = requests.post(self.Uri, headers=self.Headers, data=self.Body)
+            if res.status_code == 204:
+                self.log.info('Removed agent id ' + str(machine_agent_id))
+                self.log.warn('Please restart the process to lookup this agent again as the agent id may have changed.')
+                return True
+            else:
+                self.log.error('Unable to remove agent id ' + str(machine_agent_id) + ' system return code ' + str(res.status_code) + ' Reason: ' + res.reason)
+                return False
         else:
-            self.log.error('Unable to remove agent id ' + str(machine_agent_id) + ' system return code ' + str(res.status_code) + ' Reason: ' + res.reason)
-            return False
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}'.format(self.api_version,
+                                                      self.project_id,
+                                                      machine_agent_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            res = requests.delete(self.Uri, headers=self.Headers)
+            if res.status_code == 204:
+                self.log.info('Removed agent id ' + str(machine_agent_id))
+                self.log.warn('Please restart the process to lookup this '
+                              'agent again as the agent id may have changed.')
+                return True
+            else:
+                self.log.error('Unable to remove agent id ' +
+                               str(machine_agent_id) + ' system return code ' +
+                               str(res.status_code) + ' Reason: ' + res.reason)
+                return False
 
     def RemoveAllAgentsForHost(self, agent_list):
         """
@@ -1041,6 +1427,7 @@ class Agents(Command):
         """
         Enable or Disable an agent
         """
+        # TODO: update for v2 API
         self.ReInit(self.sslenabled, "/v1.0/agent/enable")
         self.headers['X-Auth-Token'] = self.authenticator.AuthToken
         self.headers['Content-Type'] = 'application/json; charset=utf-8'

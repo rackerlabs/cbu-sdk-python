@@ -6,8 +6,11 @@ import json
 import logging
 import requests
 import time
+import re
 
 from cloudbackup.common.command import Command
+
+requests.packages.urllib3.disable_warnings()
 
 
 class AuthenticationError(Exception):
@@ -429,11 +432,9 @@ class Authentication(Command):
             self.log.error('Unable to retrieve DC URI for the currently authenticated user')
             raise AuthenticationError('Unable to retrieve User Identifier. Did you authenticate?')
 
-    def GetCloudBackupApiUri(self, dc, useServiceNet=False):
+    def GetCloudBackupApiUrl(self, dc, useServiceNet=False):
         """
-        Retrive the CloudBackup URI for a given DC.
-
-        If possible, returns the Test API
+        Retrive the CloudBackup API URL for a given DC.
         """
         dc = dc.upper()
 
@@ -444,12 +445,51 @@ class Authentication(Command):
 
             for service in self.auth_data['access']['serviceCatalog']:
                 if service['name'] == 'cloudBackup':
-                    for endpoint in service['endpoints']:
-                        if endpoint['region'].lower() == dc.lower():
-                            if useServiceNet:
-                                dcuri = endpoint['internalURL']
-                            else:
-                                dcuri = endpoint['publicURL']
+                    # check for the global end-point (Phoenix)
+                    if len(service['endpoints']) == 1:
+                        # Global End-Point
+                        endpoint = service['endpoints'][0]
+                        if useServiceNet:
+                            dcuri = endpoint['internalURL']
+                        else:
+                            dcuri = endpoint['publicURL']
+
+                        # b/c the service catalog end-point is presently broken
+                        # we have to hard code it
+                        dcuri = 'https://api-prod-global.drivesrvr.com/v2/{0}'.format(
+                            self.AuthTenantId
+                        )
+                    else:
+                        # DC-specific End-Points
+                        for endpoint in service['endpoints']:
+                            if endpoint['region'].lower() == dc.lower():
+                                if useServiceNet:
+                                    dcuri = endpoint['internalURL']
+                                else:
+                                    dcuri = endpoint['publicURL']
+            if dcuri is None:
+                msg = 'Unable to find DC URI for the currently authenticated user'
+                self.log.error(msg)
+                raise AuthenticationError(msg)
+            else:
+                return dcuri
+
+        except LookupError:
+            msg = 'Unable to retrieve DC URI for the currently authenticated user'
+            self.log.error(msg)
+            raise AuthenticationError(msg)
+
+    def GetCloudBackupApiUri(self, dc, useServiceNet=False):
+        """
+        Retrive the CloudBackup URI for a given DC.
+
+        If possible, returns the Test API
+        """
+        try:
+            # We need the auth data so we must have an Auth Token
+            token = self.AuthToken  # noqa
+            dcuri = self.GetCloudBackupApiUrl(dc, useServiceNet)
+
             if dcuri is None:
                 msg = 'Unable to find DC URI for the currently authenticated user'
                 self.log.error(msg)
@@ -461,3 +501,15 @@ class Authentication(Command):
             msg = 'Unable to retrieve DC URI for the currently authenticated user'
             self.log.error(msg)
             raise AuthenticationError(msg)
+
+    def GetCloudBackupApiVersion(self, dc, useServiceNet=False):
+        cloudbackup_api_uri = self.GetCloudBackupApiUrl(dc, useServiceNet)
+        api_regex = "https://([^/]*)/v([0-9]*)([.]?)([^/]*)/([^/]*).*"
+        self.log.debug('Matching {0} with {1}'.format(
+            cloudbackup_api_uri,
+            api_regex
+        ))
+        regex_matcher = re.compile(api_regex)
+        result = regex_matcher.match(cloudbackup_api_uri)
+        api_version = result.groups()[1]
+        return int(api_version)
