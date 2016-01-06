@@ -916,6 +916,53 @@ class CloudBackupApiShell(object):
         return info
 
 
+    def WorkOnSpecificAgentConfiguration(self, active_agent_id, config_id, config_name):
+        specific_config_menu = [
+            { 'index': 0, 'text': 'Show', 'type': 'actionShow' },
+            { 'index': 1, 'text': 'Delete', 'type': 'actionDelete' },
+            { 'index': 2, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+        ]
+
+        while True:
+            print('Agent ID: {0}'.format(active_agent_id))
+            print('\tBackup Configuration ID: {0}'.format(config_id))
+            print('\tBackup Configuration Name:: {0}'.format(config_name))
+
+            selection = cloudbackup.utils.menus.promptSelection(
+                specific_config_menu,
+                'Select Action'
+            )
+
+            if selection['type'] == 'returnToPrevious':
+                return
+
+            elif selection['type'] == 'actionShow':
+                self.doPrintBackupConfigurationDetails(
+                    active_agent_id,
+                    config_id,
+                    config_name
+                )
+
+            elif selection['type'] == 'actionDelete':
+                verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
+                    'Confirm Delete Configuration {0} - {1}'.format(
+                        config_id,
+                        config_name
+                    )
+                )
+                if verify_delete == 'Yes':
+                    print('Deleting configuration...')
+                    if self.agents.RemoveAgentConfiguration(
+                            active_agent_id,
+                            config_id):
+                        # Config no longer exists, so return to previous menu
+                        return
+                    else:
+                        print('Failed to delete configuration. See log for details')
+
+                else:
+                    print('Canceling deletion of configuration.')
+
     def WorkOnAgentConfiguration(self, active_agent_id):
 
         while True:
@@ -979,7 +1026,7 @@ class CloudBackupApiShell(object):
                 )
 
             elif selection['type'] == 'configuration':
-                self.doPrintBackupConfigurationDetails(
+                self.WorkOnSpecificAgentConfiguration(
                     active_agent_id,
                     selection['id'],
                     selection['name']
