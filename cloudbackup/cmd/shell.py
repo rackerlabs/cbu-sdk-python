@@ -238,10 +238,10 @@ class CloudBackupApiShell(object):
 
         def promptStartTime():
             data['StartTime']['hour'] = cloudbackup.utils.menus.promptUserInputNumber(
-                'Hour',
+                'Hour (24-hour format)',
                 '',
-                0,
-                13,
+                -1,
+                24,
                 show_range=True
             )
             if data['StartTime']['hour'] is None:
@@ -252,8 +252,8 @@ class CloudBackupApiShell(object):
                 data['StartTime']['minute'] = cloudbackup.utils.menus.promptUserInputNumber(
                     'Minute',
                     '',
-                    0,
-                    61,
+                    -1,
+                    60,
                     show_range=True
                 )
                 if data['StartTime']['minute'] is None:
@@ -261,24 +261,12 @@ class CloudBackupApiShell(object):
                     user_aborted = True
 
                 else:
-                    amOrPm_menu = [
-                        { 'index': 0, 'text': 'AM', 'type': 'period' },
-                        { 'index': 1, 'text': 'PM', 'type': 'period' },
-                        { 'index': 2, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
-                    ]
-                    amPmSelection = cloudbackup.utils.menus.promptSelection(
-                        amOrPm_menu,
-                        'Select'
-                    )
-
-                    if amPmSelection['type'] == 'returnToPrevious':
-                        print('Aborting')
-                        user_aborted = True
-
+                    if data['StartTime']['hour'] > 12:
+                        data['StartTime']['amOrPm'] = 'PM'
                     else:
-                        data['StartTime']['amOrPm'] = amPmSelection['text']
-                        
-                        promptTimeZone()
+                        data['StartTime']['amOrPm'] = 'AM'
+
+                    promptTimeZone()
 
 
         if not user_aborted:
@@ -534,9 +522,21 @@ class CloudBackupApiShell(object):
         }
 
         backup_config = cloudbackup.client.backup.BackupConfiguration()
-        print(type(backup_config))
-        print(dir(backup_config))
-        assert(hasattr(backup_config, 'dict_source'))
+
+        # Convert from 24-hour Format to 12-hour AM/PM Format
+        if config_data['schedule']['start-time']['hour'] == 0:
+            config_data['schedule']['start-time']['hour'] = 12
+            config_data['schedule']['start-time']['am-pm'] = 'AM'
+
+        elif config_data['schedule']['start-time']['hour'] == 12:
+            config_data['schedule']['start-time']['am-pm'] = 'PM'
+            
+        elif config_data['schedule']['start-time']['hour'] in range(13, 24):
+            config_data['schedule']['start-time']['hour'] = config_data['schedule']['start-time']['hour'] - 12
+            config_data['schedule']['start-time']['am-pm'] = 'PM'
+
+        elif config_data['schedule']['start-time']['hour'] in range(1,12):
+            config_data['schedule']['start-time']['am-pm'] = 'AM'
 
         backup_config.ConfigurationName = config_data['name']
         backup_config.MachineAgentId = int(active_agent_id)
@@ -589,24 +589,6 @@ class CloudBackupApiShell(object):
             'Friday': 'FR',
             'Saturday': 'SA'
         }
-
-        if config_data['schedule']['start-time']['hour'] is not None:
-            # Convert the Hour to 24-hour format
-            config_data['schedule']['start-time']['hour'] = (
-                config_data['schedule']['start-time']['hour']
-                - 1
-            )
-
-            if config_data['schedule']['start-time']['am-pm'] == 'PM':
-                # Convert from AM to PM
-                config_data['schedule']['start-time']['hour'] = (
-                    config_data['schedule']['start-time']['hour']
-                    + 12
-                )
-
-            elif int(config_data['schedule']['start-time']['hour']) == 12:
-                # 24-hour format, midnight is 0:00:00.000->0:59:59.999
-                config_data['schedule']['start-time']['hour'] = 0
 
         backup_config = cloudbackup.client.backup.BackupConfigurationV2()
 
@@ -812,7 +794,7 @@ class CloudBackupApiShell(object):
                 print('\t\t\tType: {0}'.format(inclusion['type']))
                 print('\t\t\tPath: {0}'.format(inclusion['path']))
             print('\t\t Excluded Files and Folders:')
-            for exclusion in backup_config['inclusions']:
+            for exclusion in backup_config['exclusions']:
                 print('\t\t\tType: {0}'.format(exclusion['type']))
                 print('\t\t\tPath: {0}'.format(exclusion['path']))
         except:
