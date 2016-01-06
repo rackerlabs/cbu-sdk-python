@@ -259,6 +259,7 @@ class AgentLogLevel(Command):
             l.append(o)
             self.body = json.dumps(l)
             res = requests.patch(self.Uri, headers=self.Headers, data=self.Body)
+
         if res.status_code == 204:
             return True
         else:
@@ -1217,44 +1218,6 @@ class Agents(Command):
         else:
             self.log.error('Unable to retrieve agent configuration for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
             return False
-
-    def RemoveAgentConfiguration(self, machine_agent_id, backup_id):
-        if self.api_version == 1:
-            self.ReInit(self.sslenabled,
-                        '/v1.0/{0}/backup-configuration/{1}'.format(
-                            self.authenticator.AuthTenantId,
-                            backup_id
-                        )
-            )
-            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-            self.headers['Content-Type'] = 'application/json; charset=utf-8'
-            res = requests.delete(self.Uri, headers=self.Headers)
-            if res.status_code in (200, 204):
-                return True
-            else:
-                self.log.error('Unable to delete backup configuration {0} for agent {1}'
-                               .format(backup_id, machine_agent_id))
-                return False
-
-        else:
-            self.ReInit(self.sslenabled,
-                        '/v{0}/{1}/configurations/{2}'.format(
-                            self.api_version,
-                            self.project_id,
-                            backup_id
-                        )
-            )
-            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
-            self.headers['Content-Type'] = 'application/json; charset=utf-8'
-            self.headers['X-Project-Id'] = self.project_id
-            res = requests.delete(self.Uri, headers=self.Headers)
-            if res.status_code == 204:
-                return True
-            else:
-                self.log.error('Unable to delete backup configuration {0} for agent {1}'
-                               .format(backup_id, machine_agent_id))
-                return False
-
 
     @property
     def AgentConfigurationIds(self):
