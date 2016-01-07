@@ -919,6 +919,24 @@ class CloudBackupApiShell(object):
 
         return info
 
+    def doPrintLatestAgentActivity(self, active_agent_id):
+        activities = self.agents.GetAgentLatestActivity(active_agent_id)
+        print('Agent ID: {0}'.format(active_agent_id))
+        if len(activities):
+            for activity in activities:
+                print('\t{0} - {1}'.format(
+                          activity['id'],
+                          activity['name']
+                      )
+                )
+                print('\t\tType: {0}'.format(activity['type']))
+                print('\t\tState: {0}'.format(activity['state']))
+                print('\t\tTime: {0}'.format(activity['time']))
+
+        else:
+            print('\tNo Activity to report')
+
+        print('\n')
 
     def WorkOnSpecificAgentConfiguration(self, active_agent_id, config_id, config_name):
         specific_config_menu = [
@@ -1131,7 +1149,8 @@ class CloudBackupApiShell(object):
                 agent_detail_menu = [
                     { 'index': 1, 'text': 'Show Details', 'type': 'details' },
                     { 'index': 2, 'text': 'Access Configuration', 'type': 'configuration' },
-                    { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+                    { 'index': 3, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
+                    { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
                 ]
 
                 selection = cloudbackup.utils.menus.promptSelection(
@@ -1161,6 +1180,9 @@ class CloudBackupApiShell(object):
 
                 elif selection['type'] == 'configuration':
                     self.WorkOnAgentConfiguration(active_agent_id)
+
+                elif selection['type'] == 'actionCheckActivity':
+                    self.doPrintLatestAgentActivity(active_agent_id)
 
             # stop our thread that is keeping the agent alive
             print('Allowing the agent to throttle down...')

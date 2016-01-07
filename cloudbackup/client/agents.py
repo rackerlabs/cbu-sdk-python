@@ -1195,7 +1195,9 @@ class Agents(Command):
         if self.api_version == 1:
             self.ReInit(self.sslenabled,
                         '/v1.0/agent/configuration/{0}'.format(
-                            machine_agent_id))
+                            machine_agent_id
+                        )
+            )
             self.headers['X-Auth-Token'] = self.authenticator.AuthToken
             self.headers['Content-Type'] = 'application/json; charset=utf-8'
         else:
@@ -1236,6 +1238,111 @@ class Agents(Command):
             msg = 'Machine Agent Id ({0:}) not available. Did you call GetAgentConfiguration() for that agent?'.format(machine_agent_id)
             self.log.error(msg)
             raise AgentConfigurationNotAvailable(msg)
+
+    #
+    # Agent Activity
+    #
+    def GetAgentLatestActivity(self, machine_agent_id):
+        """
+        Retrieve the current activities of the agent
+        """
+        # Get the agent configuration so that we know we can lookup the backup configs in order
+        # to display a useful name about the activity to the user
+        self.GetAgentConfiguration(machine_agent_id)
+        agent_config = self.AgentConfiguration(machine_agent_id)
+
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/{0}/system/activity{1}'.format(
+                            self.authenticator.AuthTenantId,
+                            machine_agent_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}/activities'.format(
+                            self.api_version,
+                            self.project_id,
+                            machine_agent_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
+        res = requests.get(self.Uri, headers=self.Headers)
+        if res.status_code == 200:
+            results = []
+
+            if self.api_version == 1:
+                for activity in res.json():
+                    activity_name = ''
+                    if activity['ParentId'] != 0:
+                        try:
+                            activity_name = '{0} - {1}'.format(
+                                activity['Type'],
+                                agent_config.GetBackupNameFromId(
+                                    activity['ParentId']
+                                )
+                            )
+                        except:
+                            activity_name = '{0} - UNKNOWN({1})'.format(
+                                activity['Type'],
+                                activity['ParentId']
+                            )
+                    else:
+                        activity_name = '{0} - {1}'.format(
+                            activity['Type'],
+                            activity['DisplayName']
+                        )
+
+                    results.append(
+                        {
+                        'id': activity['Id'],
+                        'name': activity_name,
+                        'type': activity['Type'],
+                        'state': activity['CurrentState'],
+                        'time': activity['TimeOfActivity']
+                        }
+                    )
+
+            else:
+                for activity in res.json()['activities']:
+                    activity_name = ''
+                    if 'configuration' in activity.keys():
+                        try:
+                            activity_name = '{0} - {1}'.format(
+                                activity['type'],
+                                agent_config.GetBackupNameFromId(
+                                    activity['configuration']['id']
+                                )
+                            )
+                        except:
+                            activity_name = '{0} - UNKNOWN({1})'.format(
+                                activity['type'],
+                                activity['configuration']['id']
+                            )
+                    else:
+                        activity_name = activity['type']
+
+                    results.append(
+                        {
+                        'id': activity['id'],
+                        'name': activity_name,
+                        'type': activity['type'],
+                        'state': activity['state'],
+                        'time': activity['last_updated_time']
+                        }
+                    )
+
+            return results
+
+        else:
+            self.log.error('Unable to retrieve latest agent activities for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
+            return []
 
     #
     # Agent Cleanup
