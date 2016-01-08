@@ -13,6 +13,7 @@ import six
 import cloudbackup.client.agents
 import cloudbackup.client.auth
 import cloudbackup.client.backup
+import cloudbackup.client.rse
 import cloudbackup.utils.menus
 from cloudbackup.utils import tz
 
@@ -106,6 +107,9 @@ class CloudBackupApiShell(object):
             self.api['version'],
             self.auth_engine.AuthTenantId
         )
+
+        self.rse = None
+        self.snapshot_ids = {}
 
     def GetAgentIds(self):
         self.api['available-agents'] = self.agents.GetAgentsFromApi()
@@ -915,18 +919,41 @@ class CloudBackupApiShell(object):
 
         return info
 
+    def doPrintLatestAgentActivity(self, active_agent_id):
+        activities = self.agents.GetAgentLatestActivity(active_agent_id)
+        print('Agent ID: {0}'.format(active_agent_id))
+        if len(activities):
+            for activity in activities:
+                print('\t{0} - {1}'.format(
+                          activity['id'],
+                          activity['name']
+                      )
+                )
+                print('\t\tType: {0}'.format(activity['type']))
+                print('\t\tState: {0}'.format(activity['state']))
+                print('\t\tTime: {0}'.format(activity['time']))
+
+        else:
+            print('\tNo Activity to report')
+
+        print('\n')
 
     def WorkOnSpecificAgentConfiguration(self, active_agent_id, config_id, config_name):
         specific_config_menu = [
-            { 'index': 0, 'text': 'Show', 'type': 'actionShow' },
-            { 'index': 1, 'text': 'Delete', 'type': 'actionDelete' },
-            { 'index': 2, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+            { 'index': 0, 'text': 'Run', 'type': 'actionRun' },
+            { 'index': 1, 'text': 'Show', 'type': 'actionShow' },
+            { 'index': 2, 'text': 'Check Status', 'type': 'actionCheckStatus'},
+            { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
+            { 'index': 99, 'text': 'Delete', 'type': 'actionDelete' }
         ]
 
         while True:
             print('Agent ID: {0}'.format(active_agent_id))
             print('\tBackup Configuration ID: {0}'.format(config_id))
             print('\tBackup Configuration Name:: {0}'.format(config_name))
+
+            if active_agent_id in self.snapshot_ids.keys():
+                print('\tRunning Backup Snapshot ID: {0}'.format(self.snapshot_ids[active_agent_id]))
 
             selection = cloudbackup.utils.menus.promptSelection(
                 specific_config_menu,
@@ -936,12 +963,63 @@ class CloudBackupApiShell(object):
             if selection['type'] == 'returnToPrevious':
                 return
 
+            elif selection['type'] == 'actionRun':
+                if not active_agent_id in self.snapshot_ids.keys():
+                    print('Starting Backup...')
+                    self.backup_engine.StartBackup(config_id)
+                else:
+                    print('A Backup is already running.')
+
             elif selection['type'] == 'actionShow':
                 self.doPrintBackupConfigurationDetails(
                     active_agent_id,
                     config_id,
                     config_name
                 )
+
+            elif selection['type'] == 'actionCheckStatus':
+                snapshot_id = None
+                if not active_agent_id in self.snapshot_ids.keys():
+                    print('No known Backup is running.')
+                    user_provides_snapshot_id = cloudbackup.utils.menus.promptYesNoCancel(
+                        'Do you know of a Snapshot ID for this agent to check on?'
+                    )
+                    if user_provides_snapshot_id == 'Yes':
+                        snapshot_id = cloudbackup.utils.menus.promptUserInputString(
+                            'Snapshot ID',
+                            ''
+                        )
+                else:
+                    snapshot_id = self.snapshot_ids['active_agent_id']
+
+                if not snapshot_id is None:
+                    snapshot_state = None
+                    try:
+                        if self.api['version'] == 1:
+                            snapshot_state = self.backup_engine.GetBackupProgressV1(
+                                snapshot_id
+                            )
+
+                        else:
+                            snapshot_state = self.backup_engine.GetBackupProgressV2
+
+                        if not active_agent_id in self.snapshot_ids:
+                            self.snapshot_ids[active_agent_id] = snapshot_id
+
+                        state = ''
+                        stop_states = []
+                        if self.api['version'] == 1:
+                            state = 'CurrentState'
+                            stop_states = ['Completed', 'Skipped', 'Missed', 'Stopped', 'Failed', 'CompletedWithErrors']
+                        else:
+                            state = 'state'
+                            stop_states = ['completed', 'skipped', 'missed', 'stopped', 'failed', 'completed_with_errors']
+
+                        if snapshot_state[state] in stop_states:
+                            del self.snapshot_ids[active_agent_id]
+
+                    except RuntimeError as ex:
+                        print('Error retrieving snapshot state: {0}'.format(ex))
 
             elif selection['type'] == 'actionDelete':
                 verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
@@ -952,8 +1030,7 @@ class CloudBackupApiShell(object):
                 )
                 if verify_delete == 'Yes':
                     print('Deleting configuration...')
-                    if self.agents.RemoveAgentConfiguration(
-                            active_agent_id,
+                    if self.backup_engine.DeleteBackupConfiguration(
                             config_id):
                         # Config no longer exists, so return to previous menu
                         return
@@ -964,7 +1041,6 @@ class CloudBackupApiShell(object):
                     print('Canceling deletion of configuration.')
 
     def WorkOnAgentConfiguration(self, active_agent_id):
-
         while True:
             print('Agent ID: {0}'.format(active_agent_id))
 
@@ -1044,8 +1120,27 @@ class CloudBackupApiShell(object):
             print(msg)
 
         else:
+            print('Attempting to wake the agent...')
+            self.rse = cloudbackup.client.rse.Rse(
+                'cloudbackup-sdk-shell',
+                '1.0',
+                self.auth_engine,
+                self.agents,
+                None,
+                apihost=self.api['uri'],
+                api_version=self.api['version'],
+                project_id=self.auth_engine.AuthTenantId
+            )
+            self.agents.WakeSpecificAgent(
+                active_agent_id,
+                self.rse,
+                1000,
+                keep_agent_awake=True
+            )
+
+            continue_specific_agent_config = True
             agent_details = self.agents.AgentDetails(active_agent_id)
-            while True:
+            while continue_specific_agent_config:
                 print('Agent Details:')
                 print('\tAgent ID: {0}'.format(agent_details.agent_id))
                 print('\tAgent Version: {0}'.format(agent_details.AgentVersion))
@@ -1054,7 +1149,8 @@ class CloudBackupApiShell(object):
                 agent_detail_menu = [
                     { 'index': 1, 'text': 'Show Details', 'type': 'details' },
                     { 'index': 2, 'text': 'Access Configuration', 'type': 'configuration' },
-                    { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+                    { 'index': 3, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
+                    { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
                 ]
 
                 selection = cloudbackup.utils.menus.promptSelection(
@@ -1062,7 +1158,7 @@ class CloudBackupApiShell(object):
                     'Selection Action'
                 )
                 if selection['type'] == 'returnToPrevious':
-                    return
+                    continue_specific_agent_config = False
 
                 elif selection['type'] == 'details':
                     print('Agent Details:')
@@ -1084,6 +1180,13 @@ class CloudBackupApiShell(object):
 
                 elif selection['type'] == 'configuration':
                     self.WorkOnAgentConfiguration(active_agent_id)
+
+                elif selection['type'] == 'actionCheckActivity':
+                    self.doPrintLatestAgentActivity(active_agent_id)
+
+            # stop our thread that is keeping the agent alive
+            print('Allowing the agent to throttle down...')
+            self.agents.StopKeepAgentWake(active_agent_id)
 
     def doShell(self):
         while True:
