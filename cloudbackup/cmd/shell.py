@@ -7,6 +7,7 @@ import logging
 import logging.config
 import random
 import sys
+import time
 
 import six
 
@@ -534,7 +535,7 @@ class CloudBackupApiShell(object):
 
         elif config_data['schedule']['start-time']['hour'] == 12:
             config_data['schedule']['start-time']['am-pm'] = 'PM'
-            
+
         elif config_data['schedule']['start-time']['hour'] in range(13, 24):
             config_data['schedule']['start-time']['hour'] = config_data['schedule']['start-time']['hour'] - 12
             config_data['schedule']['start-time']['am-pm'] = 'PM'
@@ -919,7 +920,7 @@ class CloudBackupApiShell(object):
 
         return info
 
-    def doPrintLatestAgentActivity(self, active_agent_id):
+    def doPrintLatestAgentActivity(self, active_agent_id, show_agent_id=True):
         activities = self.agents.GetAgentLatestActivity(active_agent_id)
         print('Agent ID: {0}'.format(active_agent_id))
         if len(activities):
@@ -937,6 +938,54 @@ class CloudBackupApiShell(object):
             print('\tNo Activity to report')
 
         print('\n')
+
+    def doMonitorAgent(self, active_agent_id):
+        msg = 'Monitor Agent will periodically check agent acitivity and print out\n' \
+              'messages until CTRL+C is pressed. Do you want to continue?'
+        user_prompt_continue = cloudbackup.utils.menus.promptYesNoCancel(msg)
+        if user_prompt_continue == 'Yes':
+            msg_heartbeat =  'Show Agent Heart Beats?'
+            user_prompt_heartbeat = cloudbackup.utils.menus.promptYesNoCancel(msg_heartbeat)
+
+            show_heartbeat = False
+            if user_prompt_heartbeat == 'Yes':
+                show_heartbeat = True
+
+            sleep_time = 0.25
+            previous_marker = None
+            last_event_id = None
+            events = {}
+            while True:
+                try:
+                    previous_marker = last_event_id
+                    events, last_event_id = self.agents.GetAgentEventsSince(
+                        active_agent_id,
+                        last_event_id,
+                        5,
+                        events
+                    )
+                    if len(events):
+                        for event_name, event_data in six.iteritems(events):
+                            if event_name == 'heartbeats':
+                                if show_heartbeat:
+                                    for event_entry in event_data:
+                                        print('\tHeart Beat - {0}'.format(
+                                            event_entry['time']
+                                        ))
+
+                            else:
+                                if len(event_data) > 1:
+                                    print('\t{0}:'.format(event_name))
+                                    for event_entry in event_data:
+                                        print(event_entry)
+                                else:
+                                    print('\t{0}: {1}'.format(event_name, event_data))
+
+                    # Pause
+                    time.sleep(sleep_time)
+
+                except KeyboardInterrupt:
+                    break
 
     def WorkOnSpecificAgentConfiguration(self, active_agent_id, config_id, config_name):
         specific_config_menu = [
@@ -1108,6 +1157,64 @@ class CloudBackupApiShell(object):
                     selection['name']
                 )
 
+    def WorkOnAgentLog(self, active_agent_id):
+        agent_log_menu = [
+            { 'index': 0, 'text': 'Get Log Level', 'type': 'actionGetLogLevel' },
+            { 'index': 1, 'text': 'Set Log Level', 'type': 'actionSetLogLevel' },
+            { 'index': 2, 'text': 'Request Log Upload', 'type': 'actionGetLogData' },
+            { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+        ]
+
+        agent_log_level_menu = [
+            { 'index': 0, 'text': 'All Levels', 'type': 'loglevel', 'value': 'All' },
+            { 'index': 1, 'text': 'Trace', 'type': 'loglevel', 'value': 'Trace' },
+            { 'index': 2, 'text': 'Debug', 'type': 'loglevel', 'value': 'Debug' },
+            { 'index': 3, 'text': 'Info', 'type': 'loglevel', 'value': 'Info' },
+            { 'index': 4, 'text': 'Warn', 'type': 'loglevel', 'value': 'Warn' },
+            { 'index': 5, 'text': 'Error', 'type': 'loglevel', 'value': 'Error' },
+            { 'index': 6, 'text': 'Fatal', 'type': 'loglevel', 'value': 'Fatal' },
+            { 'index': 7, 'text': 'Cancel', 'type': 'cancel' }
+        ]
+
+        while True:
+            print('Agent ID: {0}'.format(active_agent_id))
+
+            selection = cloudbackup.utils.menus.promptSelection(
+                agent_log_menu,
+                'Selection Action'
+            )
+
+            if selection['type'] == 'returnToPrevious':
+                return
+
+            elif selection['type'] == 'actionGetLogLevel':
+                current_log_level = self.agents.loglevel.GetLogLevel(
+                    active_agent_id
+                )
+                print('\tActive Log Level: {0}'.format(current_log_level))
+
+            elif selection['type'] == 'actionSetLogLevel':
+                log_level_selection = cloudbackup.utils.menus.promptSelection(
+                    agent_log_level_menu,
+                    'Select Log Level'
+                )
+
+                if log_level_selection['type'] == 'cancel':
+                    pass
+
+                elif log_level_selection['type'] == 'loglevel':
+                    print('Attempting to set log level to {0}'.format(
+                        log_level_selection['text']
+                    ))
+                    if not self.agents.loglevel.SetLogLevel(
+                            active_agent_id,
+                            log_level_selection['value']
+                            ):
+                        self.log.debug('Failed to set log level')
+                        print('Failed to set log level')
+
+            elif selection['type'] == 'actionGetLogData':
+                pass
 
     def WorkOnAgent(self, active_agent_id):
         # do the negative test so that we can dedicate more space to the
@@ -1120,23 +1227,30 @@ class CloudBackupApiShell(object):
             print(msg)
 
         else:
-            print('Attempting to wake the agent...')
-            self.rse = cloudbackup.client.rse.Rse(
-                'cloudbackup-sdk-shell',
-                '1.0',
-                self.auth_engine,
-                self.agents,
-                None,
-                apihost=self.api['uri'],
-                api_version=self.api['version'],
-                project_id=self.auth_engine.AuthTenantId
+            woke_agent = False
+            should_wake_agent = cloudbackup.utils.menus.promptYesNoCancel(
+                'Wake agent?'
+                ''
             )
-            self.agents.WakeSpecificAgent(
-                active_agent_id,
-                self.rse,
-                1000,
-                keep_agent_awake=True
-            )
+            if should_wake_agent == 'Yes':
+                print('Attempting to wake the agent...')
+                self.rse = cloudbackup.client.rse.Rse(
+                    'cloudbackup-sdk-shell',
+                    '1.0',
+                    self.auth_engine,
+                    self.agents,
+                    None,
+                    apihost=self.api['uri'],
+                    api_version=self.api['version'],
+                    project_id=self.auth_engine.AuthTenantId
+                )
+                self.agents.WakeSpecificAgent(
+                    active_agent_id,
+                    self.rse,
+                    1000,
+                    keep_agent_awake=True
+                )
+                woke_agent = True
 
             continue_specific_agent_config = True
             agent_details = self.agents.AgentDetails(active_agent_id)
@@ -1148,9 +1262,11 @@ class CloudBackupApiShell(object):
                 # menu
                 agent_detail_menu = [
                     { 'index': 1, 'text': 'Show Details', 'type': 'details' },
-                    { 'index': 2, 'text': 'Access Configuration', 'type': 'configuration' },
-                    { 'index': 3, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
-                    { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+                    { 'index': 2, 'text': 'Log Configuration', 'type': 'actionLog' },
+                    { 'index': 3, 'text': 'Access Backup Configurations', 'type': 'configuration' },
+                    { 'index': 4, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
+                    { 'index': 5, 'text': 'Monitor Agent Events', 'type': 'actionMonitorAgent' },
+                    { 'index': 6, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
                 ]
 
                 selection = cloudbackup.utils.menus.promptSelection(
@@ -1178,15 +1294,22 @@ class CloudBackupApiShell(object):
                         print('\t\t{0}'.format(ipv4_address))
                     print('\n')
 
+                elif selection['type'] == 'actionLog':
+                    self.WorkOnAgentLog(active_agent_id)
+
                 elif selection['type'] == 'configuration':
                     self.WorkOnAgentConfiguration(active_agent_id)
 
                 elif selection['type'] == 'actionCheckActivity':
                     self.doPrintLatestAgentActivity(active_agent_id)
 
-            # stop our thread that is keeping the agent alive
-            print('Allowing the agent to throttle down...')
-            self.agents.StopKeepAgentWake(active_agent_id)
+                elif selection['type'] == 'actionMonitorAgent':
+                    self.doMonitorAgent(active_agent_id)
+
+            if woke_agent:
+                # stop our thread that is keeping the agent alive
+                print('Allowing the agent to throttle down...')
+                self.agents.StopKeepAgentWake(active_agent_id)
 
     def doShell(self):
         while True:

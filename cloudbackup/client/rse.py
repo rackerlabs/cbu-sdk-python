@@ -80,8 +80,15 @@ class Rse(Command):
           appversion - the application version to use with Rse
           authenticator - instance of cloudbackup.client.auth.Authentication to use
           agent - instance of cloudbackup.client.agents.Agent to use - assumes the agent instance already queried for the RSE data
-          agentkey - agent key from the agent bootstrap, see IntegrationTestConfig.GetAgentKey()
-          machine_agent_id - agent id to use rse for
+          agentkey - agent's RSE Channel
+          logfile - (optional) filename to log the RSE transactions to
+          apihost - (optional) URI of the Rackspace Cloud Backup API Host; if specified then RSE messaging will go through the API
+          api_version - required if apihost is specified
+          project_id - required if Rackspace Cloud Backup API is newer than Version 1.x
+
+        Note: If apihost is specified then the cloudbackup.client.rse.Rse instance will mimick the Cloud Backup Control Panel and
+            use the Cloud Backup API as a means to get the RSE messages. If it is not specified, then it will talk to the RSE
+            service for the agent directly.
         """
         # do not pass the info here as it will change based on the agent information when a call is actually made
         # RSE data is always over HTTPS

@@ -10,6 +10,8 @@ import requests
 import time
 import threading
 
+import six
+
 from cloudbackup.common.command import Command
 
 requests.packages.urllib3.disable_warnings()
@@ -23,7 +25,8 @@ class ParameterError(Exception):
 
 
 # function for Agents class to use to keep a given agent awake
-def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None,
+def _keep_agent_wake_thread_fn(my_notifier=None, userid=None, usertype=None,
+                               credentials=None, method=None,
                                rse_app=None, rse_version=None,
                                rse_agentkey=None, rse_log=None,
                                rse_apihost=None, rse_period=None, apihost=None,
@@ -35,21 +38,56 @@ def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None,
 
     Require parameters:
         my_notifier - threading.Event object instance that signals thread termination
-        user - username for Keystone/Identity authentication
-        apikey - apikey for Keystone/Identity authentication
+        userid - username for Keystone/Identity authentication
+        usertype - user type see cloudbackup.client.auth.Authentication for details
+        credentials - apikey for Keystone/Identity authentication
+        method - authentication method see cloudbackup.client.auth.Authentication for details
         rse_app - RSE Application Name
         rse_version - RSE Application Version
         rse_agentkey - RSE Channel to listen to
         rse_period - period between wake agent calls
         apihost - Rackspace Cloud Backup API URL
+        api_verison - Rackspace Cloud Backup API version
         agent_id -  machine agent identifier for the agent to monitor for
+        project_id - for Rackspace Cloud Backup API version 2 and newer the tenantid (aka project_id) is required
 
     Option parameters:
         rse_log - Base log file name, the thread will append data to create a unique RSE log file name for the thread's RSE queries. If not desired, specify None
         rse_apihost - RSE API URL See cloudbackup.clients.rse.Rse for details
     """
-    if None in (my_notifier, user, apikey, rse_app, rse_version, rse_agentkey, rse_period, apihost, agent_id):
-        raise RuntimeError('Invalid parameters. Some optional parameters were not properly specified')
+    if None in (my_notifier, userid, usertype, credentials, method, rse_app, rse_version, rse_agentkey, rse_period, apihost, agent_id, api_version):
+        msg_missing = []
+        if my_notifier is None:
+            msg_missing.append('my_notifier')
+        if userid is None:
+            msg_missing.append('userid')
+        if usertype is None:
+            msg_missing.append('usertype')
+        if credentials is None:
+            msg_missing.append('credentials')
+        if method is None:
+            msg_missing.append('method')
+        if rse_app is None:
+            msg_missing.append('rse_app')
+        if rse_version is None:
+            msg_missing.append('rse_version')
+        if rse_agentkey is None:
+            msg_missing.append('rse_agentkey')
+        if rse_period is None:
+            msg_missing.append('rse_period')
+        if apihost is None:
+            msg_missing.append('apihost')
+        if agent_id is None:
+            msg_missing.append('agent_id')
+        if api_version is None:
+            msg_missing.append('api_version')
+
+        raise RuntimeError('Invalid parameters. Some optional parameters were not properly specified. Missing parameters: {0}'.format(msg_missing))
+
+    if api_version > 1:
+        if project_id is None:
+            raise RuntimeError('Invalid parameters. api_version = {0} and project_id is missing.'
+                               .format(api_version))
 
     log = logging.getLogger(__name__)
 
@@ -59,7 +97,12 @@ def _keep_agent_wake_thread_fn(my_notifier=None, user=None, apikey=None,
     data = threading.local()
     data.thread_id = threading.current_thread().ident
     data.log_prefix = 'RSE Wakeup Thread[{0:}] Log'.format(data.thread_id)
-    data.auth_engine = cloudbackup.client.auth.Authentication(user, apikey)
+    data.auth_engine = cloudbackup.client.auth.Authentication(
+        user,
+        apikey,
+        usertype=usertype,
+        method=method
+    )
     data.agent_engine = cloudbackup.client.agents.Agents(True, data.auth_engine,
                                                          apihost, api_version,
                                                          project_id)
@@ -216,6 +259,7 @@ class AgentLogLevel(Command):
         'level' may also be a numeric value inclusively between 1 and 7.
         """
         if self.api_version == 1:
+            self.log.info('v1 Set Log Level')
             if not level in ('Fatal', 'Error', 'Warn', 'Info', 'Debug', 'Trace', 'All', 1, 2, 3, 4, 5, 6, 7):
                 raise ValueError('Log Level (' + str(level) + ') is not valid.')
 
@@ -243,6 +287,7 @@ class AgentLogLevel(Command):
 
             res = requests.put(self.Uri, headers=self.Headers, data=self.Body)
         else:
+            self.log.info('v{0} Set Log Level'.format(self.api_version))
             # TODO: Need to rework this whole function
             self.ReInit(self.sslenabled,
                         '/v{0}/{1}/agents/{2}'.format(self.api_version,
@@ -258,9 +303,11 @@ class AgentLogLevel(Command):
             l = []
             l.append(o)
             self.body = json.dumps(l)
+            self.log.debug('Updating Log Level: {0}'.format(o))
             res = requests.patch(self.Uri, headers=self.Headers, data=self.Body)
 
         if res.status_code == 204:
+            self.log.info('Updated log level to {0}'.format(level))
             return True
         else:
             self.log.error('Unable to set the log level. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
@@ -1022,7 +1069,9 @@ class Agents(Command):
             if woke_agent:
                 if keep_agent_awake:
                     if wake_period is None:
-                        rse_heartbeat_config = self.GetRseHeartbeatConfig(machine_agent_id)
+                        self.GetAgentConfiguration(machine_agent_id)
+                        agent_config = self.AgentConfiguration(machine_agent_id)
+                        rse_heartbeat_config = agent_config.RseHeartbeatConfig
                         self.log.debug('Rse config: {0:}'.format(rse_heartbeat_config))
                         if self.api_version == 1:
                             wake_period = (rse_heartbeat_config['Timeout']
@@ -1061,19 +1110,32 @@ class Agents(Command):
         wake_agent_thread = {}
         wake_agent_thread['id'] = machine_agent_id
         self.wake_agent_threads.append(wake_agent_thread)
+        user_credentials = self.authenticator.InitialAuthCredentials
         for a_thread in self.wake_agent_threads:
             if a_thread['id'] == machine_agent_id:
                 self.log.debug('Starting RSE Wakeup Thread for agent: {0:}'.format(machine_agent_id))
                 a_thread['terminator'] = threading.Event()
+                a_thread_kwargs = {
+                    'my_notifier': wake_agent_thread['terminator'],
+                    'userid': user_credentials['userid'],
+                    'credentials': user_credentials['credentials'],
+                    'usertype': user_credentials['usertype'],
+                    'method': user_credentials['method'],
+                    'rse_app': rse.rsedata.app,
+                    'rse_version': rse.rsedata.appVersion,
+                    'rse_agentkey': rse.agentkey,
+                    'rse_period': period,
+                    'apihost': self.apihost,
+                    'api_version': self.api_version,
+                    'agent_id': machine_agent_id,
+                    'project_id': self.project_id,
+
+                    'rse_log': rse.rselogfile,
+                    'rse_apihost': rse.apihost
+                }
                 a_thread['thread'] = threading.Thread(target=_keep_agent_wake_thread_fn,
-                                                      kwargs={'user': self.authenticator.Username, 'apikey': self.authenticator.Apikey,
-                                                              'rse_app': rse.rsedata.app, 'rse_version': rse.rsedata.appVersion,
-                                                              'rse_agentkey': rse.agentkey, 'rse_log': rse.rselogfile,
-                                                              'rse_apihost': rse.apihost, 'rse_period': period,
-                                                              'apihost': self.apihost, 'agent_id': machine_agent_id,
-                                                              'my_notifier': wake_agent_thread['terminator'],
-                                                               'api_version': self.api_version,
-                                                               'project_id': self.project_id})
+                                                      kwargs=a_thread_kwargs
+                )
                 a_thread['thread'].start()
                 break
 
@@ -1310,7 +1372,9 @@ class Agents(Command):
                     )
 
             else:
-                for activity in res.json()['activities']:
+                activities = res.json()['activities']
+                activities.reverse()
+                for activity in activities:
                     activity_name = ''
                     if 'configuration' in activity.keys():
                         try:
@@ -1343,6 +1407,164 @@ class Agents(Command):
         else:
             self.log.error('Unable to retrieve latest agent activities for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
             return []
+
+    def GetAgentEventsSince(self, machine_agent_id, last_event_id, event_limit=100, results={}):
+        """
+        Retrieve the events of the agent since the last events id specified
+
+        {
+            'heartbeats': [
+                <event>,..
+            ],
+            'backup <id>: [
+                <event>,..
+            ],
+            'restore <id>: [
+                <event>,..
+            ],..
+
+        """
+        # Get the agent configuration so that we know we can lookup the backup configs in order
+        # to display a useful name about the activity to the user
+        self.GetAgentConfiguration(machine_agent_id)
+        agent_config = self.AgentConfiguration(machine_agent_id)
+
+        flip_activity_list_due_to_api_inconsistency = False
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/{0}/system/activity{1}'.format(
+                            self.authenticator.AuthTenantId,
+                            machine_agent_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+        else:
+            if last_event_id is None:
+                self.ReInit(self.sslenabled,
+                            '/v{0}/{1}/agents/{2}/events'.format(
+                                self.api_version,
+                                self.project_id,
+                                machine_agent_id
+                            )
+                )
+            else:
+                self.ReInit(self.sslenabled,
+                            '/v{0}/{1}/agents/{2}/events?marker={3}&limit={4}&sort_dir=asc'.format(
+                                self.api_version,
+                                self.project_id,
+                                machine_agent_id,
+                                last_event_id,
+                                event_limit
+                            )
+                )
+                flip_activity_list_due_to_api_inconsistency = True
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
+        res = requests.get(self.Uri, headers=self.Headers)
+        if res.status_code == 200:
+            new_last_event_id = None
+
+            if self.api_version == 1:
+                # TODO: v1 doesn't have Events like V2 does...
+                # v1 API we look at the Id as it is monotonously increasing
+                if last_event_id is None:
+                    new_last_event_id = 0
+                else:
+                    new_last_event_id = last_event_id
+
+                for activity in res.json():
+                    activity_name = ''
+                    if activity['ParentId'] != 0:
+                        try:
+                            activity_name = '{0} - {1}'.format(
+                                activity['Type'],
+                                agent_config.GetBackupNameFromId(
+                                    activity['ParentId']
+                                )
+                            )
+                        except:
+                            activity_name = '{0} - UNKNOWN({1})'.format(
+                                activity['Type'],
+                                activity['ParentId']
+                            )
+                    else:
+                        activity_name = '{0} - {1}'.format(
+                            activity['Type'],
+                            activity['DisplayName']
+                        )
+
+                    if activity['Id'] > last_event_id:
+                        results.append(
+                            {
+                            'id': activity['Id'],
+                            'name': activity_name,
+                            'type': activity['Type'],
+                            'state': activity['CurrentState'],
+                            'time': activity['TimeOfActivity']
+                            }
+                        )
+                        new_last_event_id = activity['Id']
+
+                    # Reverse the order so that the newest is at the start
+                    results.reverse()
+
+            else:
+                events = res.json()['events']
+                if flip_activity_list_due_to_api_inconsistency:
+                    events.reverse()
+
+                new_last_event_id = last_event_id
+                if new_last_event_id is None:
+                    new_last_event_id = 0
+
+                if not 'heartbeats' in results.keys():
+                    results['heartbeats'] = []
+
+                for event in events:
+                    # update the last event
+                    if event['id'] > new_last_event_id:
+                        new_last_event_id = event['id']
+
+                    # filter heart beats
+                    if 'event' in event.keys():
+                        if 'heartbeat' in event['event']:
+                            results['heartbeats'].append(event)
+
+                    else:
+                        event_name = None
+
+                        # filter backups
+                        if 'backup' in event.keys():
+                            if 'id' in event['backup'].keys():
+                                event_name = 'Backup {0}'.format(
+                                    event['backup']['id']
+                                )
+
+                        # filter restores
+                        elif 'restore' in event.keys():
+                            if 'id' in event['restore'].keys():
+                                event_name = 'Restore {0}'.format(
+                                    event['restore']['id']
+                                )
+                        if not event_name is None:
+                            if not event_name in results.keys():
+                                results[event_name] = []
+
+                            results[event_name].append(event)
+                        else:
+                            # Dump everything else based on the size of the results
+                            # so that they enter in order
+                            results[len(results)] = event
+
+            return (results, new_last_event_id)
+
+        else:
+            self.log.error('Unable to retrieve latest agent events for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
+            return ([], last_event_id)
 
     #
     # Agent Cleanup
