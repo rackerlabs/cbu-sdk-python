@@ -16,6 +16,8 @@ import cloudbackup.client.backup
 import cloudbackup.client.rse
 import cloudbackup.cmd.shell.exceptions
 import cloudbackup.cmd.shell.prompter as prompt_user
+import cloudbackup.utils.menus
+from cloudbackup.utils import tz
 
 class CloudBackupApiShell(object):
 
@@ -564,6 +566,7 @@ class CloudBackupApiShell(object):
             events = {}
             while True:
                 try:
+                    print('Checking for events after {0}'.format(last_event_id))
                     previous_marker = last_event_id
                     events, last_event_id = self.agents.GetAgentEventsSince(
                         active_agent_id,
@@ -599,7 +602,8 @@ class CloudBackupApiShell(object):
             { 'index': 0, 'text': 'Run', 'type': 'actionRun' },
             { 'index': 1, 'text': 'Show', 'type': 'actionShow' },
             { 'index': 2, 'text': 'Check Status', 'type': 'actionCheckStatus'},
-            { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
+            { 'index': 3, 'text': 'Get Backup Reports', 'type': 'actionGetBackupReports'},
+            { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
             { 'index': 99, 'text': 'Delete', 'type': 'actionDelete' }
         ]
 
@@ -622,7 +626,8 @@ class CloudBackupApiShell(object):
             elif selection['type'] == 'actionRun':
                 if not active_agent_id in self.snapshot_ids.keys():
                     print('Starting Backup...')
-                    self.backup_engine.StartBackup(config_id)
+                    backup_id = self.backup_engine.StartBackup(config_id)
+                    print('\tBackup Id: {0}'.format(backup_id))
                 else:
                     print('A Backup is already running.')
 
@@ -676,6 +681,54 @@ class CloudBackupApiShell(object):
 
                     except RuntimeError as ex:
                         print('Error retrieving snapshot state: {0}'.format(ex))
+
+            elif selection['type'] == 'actionGetBackupReports':
+
+                while True:
+                    # Get the latest set of backups so the menu is always up-to-date
+                    all_backups = self.backup_engine.GetAllBackupsForConfiguration(
+                        config_id
+                    )
+
+                    backup_config_menu = []
+                    for backup_entry in all_backups:
+                        backup_config_menu.append(
+                            {
+                                'index': len(backup_config_menu),
+                                'text': '{0} - {2} - {1}'.format(
+                                    backup_entry['id'],
+                                    backup_entry['state'],
+                                    backup_entry['updated_at']
+                                ),
+                                'type': 'backup_id',
+                                'backup_id': backup_entry['id']
+                            }
+                        )
+                    backup_config_menu.append(
+                        {
+                            'index': len(backup_config_menu),
+                            'text': 'Return to previous menu',
+                            'type': 'returnToPrevious'
+                        }
+                    )
+
+                    backup_config_selection = cloudbackup.utils.menus.promptSelection(
+                        backup_config_menu,
+                        'Select Backup'
+                    )
+                    if backup_config_selection['type'] == 'returnToPrevious':
+                        break
+
+                    elif backup_config_selection['type'] == 'backup_id':
+                        backup_report = self.backup_engine.GetBackupReport(
+                            backup_config_selection['backup_id']
+                        )
+                        report_data = json.dumps(
+                            backup_report,
+                            sort_keys=True,
+                            indent=4
+                        )
+                        print(report_data)
 
             elif selection['type'] == 'actionDelete':
                 verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
