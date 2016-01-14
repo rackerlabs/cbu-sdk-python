@@ -182,7 +182,7 @@ class AgentLogLevel(Command):
     """
     Object controlling the log levels for agents
     """
-    def __init__(self, sslenabled, authenticator, apihost, api_version, project_id):
+    def __init__(self, sslenabled, authenticator, apihost, api_version=1, project_id=None):
         super(self.__class__, self).__init__(sslenabled, apihost, '/')
         self.log = logging.getLogger(__name__)
 
@@ -367,7 +367,7 @@ class AgentDetails(object):
     Object describing a given Agent instance described by the Agent Details API Endpoint
     """
 
-    def __init__(self, details, version):
+    def __init__(self, details, version=1):
 
         # TODO: Replace this verification and use JSON Schema
         self.version = version
@@ -584,7 +584,7 @@ class AgentConfiguration(object):
     Object describing the various Agent configurations
     """
 
-    def __init__(self, configuration, version):
+    def __init__(self, configuration, version=1):
 
         # TODO: Replace this verification and use JSON Schema
         self.version = version
@@ -957,7 +957,7 @@ class Agents(Command):
     Presently supports the RAX v1.0 API
     """
 
-    def __init__(self, sslenabled, authenticator, apihost, api_version, project_id):
+    def __init__(self, sslenabled, authenticator, apihost, api_version=1, project_id=None):
         """
         Initialize the Agent access
           sslenabled - True if using HTTPS; otherwise False

@@ -1057,8 +1057,8 @@ class Backups(Command):
     Object to manage backup operations
     """
 
-    def __init__(self, sslenabled, authenticator, apihost, api_version,
-                 project_id):
+    def __init__(self, sslenabled, authenticator, apihost, api_version=1,
+                 project_id=None):
         """
         Initialize the backups
           sslenabled - True if using HTTPS; otherwise False
@@ -1966,8 +1966,8 @@ class Restores(Command):
     '''
     Object to manage restore operations
     '''
-    def __init__(self, sslenabled, authenticator, apihost, api_version,
-                 project_id):
+    def __init__(self, sslenabled, authenticator, apihost, api_version=1,
+                 project_id=None):
         super(self.__class__, self).__init__(sslenabled, apihost, '/')
         self.log = logging.getLogger(__name__)
         # save the ssl status for the various reinits done for each API call supported
