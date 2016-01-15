@@ -1,4 +1,3 @@
-#!/usr/bin/python
 from __future__ import print_function
 
 import argparse
@@ -7,6 +6,7 @@ import logging
 import logging.config
 import random
 import sys
+import time
 
 import six
 
@@ -14,25 +14,16 @@ import cloudbackup.client.agents
 import cloudbackup.client.auth
 import cloudbackup.client.backup
 import cloudbackup.client.rse
+import cloudbackup.cmd.shell.exceptions
+import cloudbackup.cmd.shell.prompter as prompt_user
 import cloudbackup.utils.menus
 from cloudbackup.utils import tz
-
-class CloudBackupApiShellException(Exception):
-    pass
-
-class CloudBackupApiBadParameters(CloudBackupApiShellException):
-    pass
-
-
-class CloudBackupApiBadAuthData(CloudBackupApiShellException):
-    pass
-
 
 class CloudBackupApiShell(object):
 
     def __init__(self, logger, auth_data_file, datacenter, use_servicenet=False):
         if datacenter not in ('ord', 'syd', 'hkg', 'iad', 'dfw', 'lon'):
-            raise CloudBackupApiBadParameters(
+            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadParameters(
                 'Invalid Datacenter - {0}'.format(datacenter))
 
         self.api = {}
@@ -53,7 +44,7 @@ class CloudBackupApiShell(object):
 
         if self.auth_data['user_type'] not in (
                 'user', 'tenantid', 'tenantname'):
-            raise CloudBackupApiBadAuthData(
+            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadAuthData(
                 'invalid user type {0}'.format(
                     self.auth_data['user_type']))
 
@@ -70,7 +61,7 @@ class CloudBackupApiShell(object):
             self.auth_data['credentials'] = self.auth_data['json']['password']
 
         else:
-            raise CloudBackupApiBadAuthData('invalid json file')
+            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadAuthData('invalid json file')
 
         # Build the Auth Engine
         self.auth_engine = cloudbackup.client.auth.Authentication(
@@ -135,385 +126,6 @@ class CloudBackupApiShell(object):
         )
         return selection
 
-    @staticmethod
-    def doPromptBackConfigurationName(user_aborted=False):
-        name = None
-        if not user_aborted:
-            name = cloudbackup.utils.menus.promptUserInputString(
-                'Backup Configuration Name',
-                '',
-            )
-        return name
-
-    @staticmethod
-    def doPromptFrequency(api_version, user_aborted=False):
-        data = {
-            'frequency': None,
-            'dayOfWeek': None,
-            'StartTime': {
-                'hour': None,
-                'minute': None,
-                'amOrPm': None,
-                'timeZone': None
-            },
-            'interval': None
-        }
-
-        def promptBaseRate():
-            base_rate_menu = [
-                { 'index': 0, 'text': 'Manually', 'type': 'frequency' },
-                { 'index': 1, 'text': 'Hourly', 'type': 'frequency' },
-                { 'index': 2, 'text': 'Daily', 'type': 'frequency' },
-                { 'index': 3, 'text': 'Weekly', 'type': 'frequency' },
-                { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
-            ]
-            base = cloudbackup.utils.menus.promptSelection(
-                base_rate_menu,
-                'Select Frequency'
-            )
-
-            if base['type'] == 'frequency':
-                return base['text']
-
-            elif base['type'] == 'returnToPrevious':
-                print('Aborting')
-                user_aborted = True
-                return None
-
-        def promptWeekDay():
-            weekday_menu = [
-                { 'index': 0, 'text': 'Sunday', 'type': 'day' },
-                { 'index': 1, 'text': 'Monday', 'type': 'day' },
-                { 'index': 2, 'text': 'Tuesday', 'type': 'day' },
-                { 'index': 3, 'text': 'Wednesday', 'type': 'day' },
-                { 'index': 4, 'text': 'Thursday', 'type': 'day' },
-                { 'index': 5, 'text': 'Friday', 'type': 'day' },
-                { 'index': 6, 'text': 'Saturday', 'type': 'day' },
-                { 'index': 7, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
-            ]
-            weekday = cloudbackup.utils.menus.promptSelection(
-                weekday_menu,
-                'Select Day of Week'
-            )
-
-            if weekday['type'] == 'day':
-                return weekday['text']
-
-            elif weekday['type'] == 'returnToPrevious':
-                print('Aborting')
-                user_aborted = True
-                return None
-
-        def promptTimeZone():
-            valid_keys = []
-            if api_version == 1:
-                valid_keys = tz.get_v1_timezone_name_list()
-            elif api_version == 2:
-                valid_keys = tz.get_v2_timezone_name_list()
-            else:
-                print('Unknown Cloud Backup API Version. Assuming V2 or later...')
-                valid_keys = tz.get_v2_timezone_name_list()
-
-            tz_menu = [
-            ]
-            for tz_name in valid_keys:
-                tz_menu.append({
-                    'index': len(tz_menu),
-                    'text': tz_name,
-                        'type': 'timezone_name'
-                    })
-            tz_menu.append({
-                'index': len(tz_menu),
-                'text': 'Cancel',
-                'type': 'returnToPrevious'
-            })
-
-            tz_selection = cloudbackup.utils.menus.promptSelection(
-                tz_menu,
-                'Time Zone Selection'
-            )
-
-            if tz_selection['type'] == 'returnToPrevious':
-                print('Aborting')
-                user_aborted = True
-
-            elif tz_selection['type'] == 'timezone_name':
-                data['StartTime']['timeZone'] = tz_selection['text']
-
-        def promptStartTime():
-            data['StartTime']['hour'] = cloudbackup.utils.menus.promptUserInputNumber(
-                'Hour (24-hour format)',
-                '',
-                -1,
-                24,
-                show_range=True
-            )
-            if data['StartTime']['hour'] is None:
-                print('Aborting')
-                user_aborted = True
-
-            else:
-                data['StartTime']['minute'] = cloudbackup.utils.menus.promptUserInputNumber(
-                    'Minute',
-                    '',
-                    -1,
-                    60,
-                    show_range=True
-                )
-                if data['StartTime']['minute'] is None:
-                    print('Aborting')
-                    user_aborted = True
-
-                else:
-                    if data['StartTime']['hour'] > 12:
-                        data['StartTime']['amOrPm'] = 'PM'
-                    else:
-                        data['StartTime']['amOrPm'] = 'AM'
-
-                    promptTimeZone()
-
-
-        if not user_aborted:
-            data['frequency'] = promptBaseRate()
-
-        if not user_aborted:
-            if data['frequency'] == 'Weekly':
-                data['dayOfWeek'] = promptWeekDay()
-
-            if data['frequency'] in ('Weekly', 'Daily'):
-                promptStartTime()
-
-            if data['frequency'] == 'Hourly':
-                data['interval'] = cloudbackup.utils.menus.promptUserInputNumber(
-                    'Hourly Interval',
-                    '',
-                    0,
-                    24,
-                    show_range=True
-                )
-
-                if data['interval'] is None:
-                    user_aborted = True
-
-                else:
-                    promptTimeZone()
-
-            else:
-                # TODO: Prompt for how often to run non-hourly intervals
-                data['interval'] = 1
-
-        if not user_aborted:
-            return data
-        else:
-            return None
-
-    @staticmethod
-    def doPromptRetention(user_aborted=False):
-        retention = None
-
-        if not user_aborted:
-            retention_menu = [
-                { 'index': 0, 'text': 'Indefinite', 'type': 'retention', 'r': 0 },
-                { 'index': 1, 'text': '30 Day', 'type': 'retention', 'r': 30 },
-                { 'index': 2, 'text': '60 Day', 'type': 'retention', 'r': 60 },
-                { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
-            ]
-            selection = cloudbackup.utils.menus.promptSelection(
-                retention_menu,
-                'Select Retention'
-            )
-
-            if selection['type'] == 'retention':
-                retention = selection['r']
-
-            elif selection['type'] == 'returnToPrevious':
-                print('Aborting')
-                user_aborted = True
-                retention = None
-
-        return retention
-
-    @staticmethod
-    def doPromptNotifications(user_aborted=False):
-        notification_data = None
-
-        if not user_aborted:
-            notification_data = {
-                'addresses': [],
-                'onSuccess': False,
-                'onFailure': True
-            }
-
-            while True:
-                notification_menu = [
-                ]
-                li = 0
-                for address in notification_data['addresses']:
-                    notification_menu.append({
-                        'index': len(notification_menu),
-                        'text': address,
-                        'type': 'address',
-                        'li': li
-                    })
-                    li = li + 1
-                notification_menu.append({
-                    'index': len(notification_menu),
-                    'text': 'Add E-mail Address',
-                    'type': 'addAddress'
-                })
-                notification_menu.append({
-                    'index': len(notification_menu),
-                    'text': 'Save',
-                    'type': 'save'
-                })
-                notification_menu.append({
-                    'index': len(notification_menu),
-                    'text': 'Cancel',
-                    'type': 'returnToPrevious'
-                })
-
-                selection = cloudbackup.utils.menus.promptSelection(
-                    notification_menu,
-                    'Select Action'
-                )
-
-                if selection['type'] == 'returnToPrevious':
-                    print('Aborting')
-                    notification_data = None
-                    user_aborted = True
-                    break
-
-                elif selection['type'] == 'save':
-                    if not len(notification_data['addresses']):
-                        print('No e-mail addresses provided.')
-                        print('There must be at least one (1) e-mail address.')
-                    else:
-                        break
-
-                elif selection['type'] == 'addAddress':
-                    addressToAdd = cloudbackup.utils.menus.promptUserInputString(
-                        'E-mail Address',
-                        '',
-                    )
-                    if not addressToAdd is None:
-                        notification_data['addresses'].append(addressToAdd)
-
-                elif selection['type'] == 'address':
-                    removeAddress = cloudbackup.utils.menus.promptYesNoCancel(
-                        'Remove {0} from the list?'.format(selection['text']),
-                        ''
-                    )
-                    if removeAddress == 'Yes':
-                        try:
-                            list_index = selection['li']
-                            if notification_data['addresses'][list_index] == selection['text']:
-                                del notification_data['addresses'][list_index]
-                        except:
-                            print('Error while removing E-mail Address from list')
-
-        if not user_aborted:
-            notifySuccess = cloudbackup.utils.menus.promptYesNoCancel(
-                'Notify on successful events?',
-                ''
-            )
-            if notifySuccess == 'Yes':
-                notification_data['onSuccess'] = True
-
-        return notification_data
-
-    @staticmethod
-    def doPromptFilesAndFolders(user_aborted=True, inclusion=False):
-        files_and_folders = None
-
-        if not user_aborted:
-            files_and_folders = []
-            while True:
-                files_and_folders_menu = [
-                ]
-                li = 0
-                for fileOrFolder in files_and_folders:
-                    item_name, item_type = fileOrFolder
-                    files_and_folders_menu.append({
-                        'index': len(files_and_folders_menu),
-                        'text': '{0} - {1}'.format(item_name, item_type),
-                        'type': 'fileOrFolder',
-                        'li': li
-                    })
-                    li = li + 1
-
-                files_and_folders_menu.append({
-                    'index': len(files_and_folders_menu),
-                    'text': 'Add File',
-                    'type': 'addFile'
-                })
-                files_and_folders_menu.append({
-                    'index': len(files_and_folders_menu),
-                    'text': 'Add Folder',
-                    'type': 'addFolder'
-                })
-                files_and_folders_menu.append({
-                    'index': len(files_and_folders_menu),
-                    'text': 'Save',
-                    'type': 'save'
-                })
-                files_and_folders_menu.append({
-                    'index': len(files_and_folders_menu),
-                    'text': 'Cancel',
-                    'type': 'returnToPrevious'
-                })
-
-                menu_prompt = '{0} Selection'.format(
-                    'Inclusion' if inclusion else 'Exclusion'
-                )
-
-                selection = cloudbackup.utils.menus.promptSelection(
-                    files_and_folders_menu,
-                    menu_prompt
-                )
-
-                if selection['type'] == 'returnToPrevious':
-                    print('Aborting')
-                    files_and_folders = None
-                    user_aborted = True
-                    break
-
-                elif selection['type'] == 'save':
-                    if inclusion and not len(files_and_folders):
-                        print('There must be at least 1 file or folder specified for inclusion')
-                    else:
-                        break
-
-                elif selection['type'] == 'addFile':
-                    fileOrFolderToAdd = cloudbackup.utils.menus.promptUserInputString(
-                        'File Path',
-                        '',
-                    )
-                    if not fileOrFolderToAdd is None:
-                        files_and_folders.append((fileOrFolderToAdd, 'file'))
-
-                elif selection['type'] == 'addFolder':
-                    fileOrFolderToAdd = cloudbackup.utils.menus.promptUserInputString(
-                        'Folder Path',
-                        '',
-                    )
-                    if not fileOrFolderToAdd is None:
-                        files_and_folders.append((fileOrFolderToAdd, 'folder'))
-
-                elif selection['type'] == 'fileOrFolder':
-                    removeFileOrFolder = cloudbackup.utils.menus.promptYesNoCancel(
-                        'Remove {0} from the list?'.format(selection['text']),
-                        ''
-                    )
-                    if removeFileOrFolder == 'Yes':
-                        try:
-                            list_index = selection['li']
-                            if files_and_folders[list_index][0] == selection['text']:
-                                del files_and_folders[list_index]
-                        except:
-                            print('Error while removing File or Folder Path from list')
-
-        return files_and_folders
-
     def doCreateV1BackupConfiguration(self, active_agent_id, config_data):
         DayOfWeekMapping = {
             'Sunday': 0,
@@ -534,7 +146,7 @@ class CloudBackupApiShell(object):
 
         elif config_data['schedule']['start-time']['hour'] == 12:
             config_data['schedule']['start-time']['am-pm'] = 'PM'
-            
+
         elif config_data['schedule']['start-time']['hour'] in range(13, 24):
             config_data['schedule']['start-time']['hour'] = config_data['schedule']['start-time']['hour'] - 12
             config_data['schedule']['start-time']['am-pm'] = 'PM'
@@ -580,8 +192,6 @@ class CloudBackupApiShell(object):
         if not self.backup_engine.CreateBackupConfiguration(
                 backup_config):
             print('Failed to create backup configuration. See logs for details')
-
-
 
     def doCreateV2BackupConfiguration(self, active_agent_id, config_data):
         DayOfWeekMapping = {
@@ -667,12 +277,12 @@ class CloudBackupApiShell(object):
         }
         user_aborted = False
 
-        prompted_config_data['name'] = CloudBackupApiShell.doPromptBackConfigurationName(
+        prompted_config_data['name'] = prompt_user.doPromptBackupConfigurationName(
             user_aborted
         )
         user_aborted = check_user_aborted(prompted_config_data['name'])
 
-        frequency_data = CloudBackupApiShell.doPromptFrequency(
+        frequency_data = prompt_user.doPromptFrequency(
             self.api['version'],
             user_aborted
         )
@@ -686,11 +296,11 @@ class CloudBackupApiShell(object):
             prompted_config_data['schedule']['start-time']['timezone'] = frequency_data['StartTime']['timeZone']
             prompted_config_data['schedule']['hourly-interval'] = frequency_data['interval']
 
-        prompted_config_data['retention'] = CloudBackupApiShell.doPromptRetention(
+        prompted_config_data['retention'] = prompt_user.doPromptRetention(
             user_aborted
         )
 
-        notification_data = CloudBackupApiShell.doPromptNotifications(
+        notification_data = prompt_user.doPromptNotifications(
             user_aborted
         )
         user_aborted = check_user_aborted(notification_data)
@@ -699,7 +309,7 @@ class CloudBackupApiShell(object):
             prompted_config_data['notifications']['success'] = notification_data['onSuccess']
             prompted_config_data['notifications']['failure'] = notification_data['onFailure']
 
-        inclusion_data = CloudBackupApiShell.doPromptFilesAndFolders(
+        inclusion_data = prompt_user.doPromptFilesAndFolders(
             user_aborted,
             inclusion=True
         )
@@ -707,7 +317,7 @@ class CloudBackupApiShell(object):
         if not user_aborted:
             prompted_config_data['paths']['inclusions'] = inclusion_data
 
-        exclusion_data = CloudBackupApiShell.doPromptFilesAndFolders(
+        exclusion_data = prompt_user.doPromptFilesAndFolders(
             user_aborted,
             inclusion=False
         )
@@ -919,7 +529,7 @@ class CloudBackupApiShell(object):
 
         return info
 
-    def doPrintLatestAgentActivity(self, active_agent_id):
+    def doPrintLatestAgentActivity(self, active_agent_id, show_agent_id=True):
         activities = self.agents.GetAgentLatestActivity(active_agent_id)
         print('Agent ID: {0}'.format(active_agent_id))
         if len(activities):
@@ -938,12 +548,62 @@ class CloudBackupApiShell(object):
 
         print('\n')
 
+    def doMonitorAgent(self, active_agent_id):
+        msg = 'Monitor Agent will periodically check agent acitivity and print out\n' \
+              'messages until CTRL+C is pressed. Do you want to continue?'
+        user_prompt_continue = cloudbackup.utils.menus.promptYesNoCancel(msg)
+        if user_prompt_continue == 'Yes':
+            msg_heartbeat =  'Show Agent Heart Beats?'
+            user_prompt_heartbeat = cloudbackup.utils.menus.promptYesNoCancel(msg_heartbeat)
+
+            show_heartbeat = False
+            if user_prompt_heartbeat == 'Yes':
+                show_heartbeat = True
+
+            sleep_time = 0.25
+            previous_marker = None
+            last_event_id = None
+            events = {}
+            while True:
+                try:
+                    print('Checking for events after {0}'.format(last_event_id))
+                    previous_marker = last_event_id
+                    events, last_event_id = self.agents.GetAgentEventsSince(
+                        active_agent_id,
+                        last_event_id,
+                        5,
+                        events
+                    )
+                    if len(events):
+                        for event_name, event_data in six.iteritems(events):
+                            if event_name == 'heartbeats':
+                                if show_heartbeat:
+                                    for event_entry in event_data:
+                                        print('\tHeart Beat - {0}'.format(
+                                            event_entry['time']
+                                        ))
+
+                            else:
+                                if len(event_data) > 1:
+                                    print('\t{0}:'.format(event_name))
+                                    for event_entry in event_data:
+                                        print(event_entry)
+                                else:
+                                    print('\t{0}: {1}'.format(event_name, event_data))
+
+                    # Pause
+                    time.sleep(sleep_time)
+
+                except KeyboardInterrupt:
+                    break
+
     def WorkOnSpecificAgentConfiguration(self, active_agent_id, config_id, config_name):
         specific_config_menu = [
             { 'index': 0, 'text': 'Run', 'type': 'actionRun' },
             { 'index': 1, 'text': 'Show', 'type': 'actionShow' },
             { 'index': 2, 'text': 'Check Status', 'type': 'actionCheckStatus'},
-            { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
+            { 'index': 3, 'text': 'Get Backup Reports', 'type': 'actionGetBackupReports'},
+            { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
             { 'index': 99, 'text': 'Delete', 'type': 'actionDelete' }
         ]
 
@@ -966,7 +626,8 @@ class CloudBackupApiShell(object):
             elif selection['type'] == 'actionRun':
                 if not active_agent_id in self.snapshot_ids.keys():
                     print('Starting Backup...')
-                    self.backup_engine.StartBackup(config_id)
+                    backup_id = self.backup_engine.StartBackup(config_id)
+                    print('\tBackup Id: {0}'.format(backup_id))
                 else:
                     print('A Backup is already running.')
 
@@ -1020,6 +681,54 @@ class CloudBackupApiShell(object):
 
                     except RuntimeError as ex:
                         print('Error retrieving snapshot state: {0}'.format(ex))
+
+            elif selection['type'] == 'actionGetBackupReports':
+
+                while True:
+                    # Get the latest set of backups so the menu is always up-to-date
+                    all_backups = self.backup_engine.GetAllBackupsForConfiguration(
+                        config_id
+                    )
+
+                    backup_config_menu = []
+                    for backup_entry in all_backups:
+                        backup_config_menu.append(
+                            {
+                                'index': len(backup_config_menu),
+                                'text': '{0} - {2} - {1}'.format(
+                                    backup_entry['id'],
+                                    backup_entry['state'],
+                                    backup_entry['updated_at']
+                                ),
+                                'type': 'backup_id',
+                                'backup_id': backup_entry['id']
+                            }
+                        )
+                    backup_config_menu.append(
+                        {
+                            'index': len(backup_config_menu),
+                            'text': 'Return to previous menu',
+                            'type': 'returnToPrevious'
+                        }
+                    )
+
+                    backup_config_selection = cloudbackup.utils.menus.promptSelection(
+                        backup_config_menu,
+                        'Select Backup'
+                    )
+                    if backup_config_selection['type'] == 'returnToPrevious':
+                        break
+
+                    elif backup_config_selection['type'] == 'backup_id':
+                        backup_report = self.backup_engine.GetBackupReport(
+                            backup_config_selection['backup_id']
+                        )
+                        report_data = json.dumps(
+                            backup_report,
+                            sort_keys=True,
+                            indent=4
+                        )
+                        print(report_data)
 
             elif selection['type'] == 'actionDelete':
                 verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
@@ -1108,6 +817,64 @@ class CloudBackupApiShell(object):
                     selection['name']
                 )
 
+    def WorkOnAgentLog(self, active_agent_id):
+        agent_log_menu = [
+            { 'index': 0, 'text': 'Get Log Level', 'type': 'actionGetLogLevel' },
+            { 'index': 1, 'text': 'Set Log Level', 'type': 'actionSetLogLevel' },
+            { 'index': 2, 'text': 'Request Log Upload', 'type': 'actionGetLogData' },
+            { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+        ]
+
+        agent_log_level_menu = [
+            { 'index': 0, 'text': 'All Levels', 'type': 'loglevel', 'value': 'All' },
+            { 'index': 1, 'text': 'Trace', 'type': 'loglevel', 'value': 'Trace' },
+            { 'index': 2, 'text': 'Debug', 'type': 'loglevel', 'value': 'Debug' },
+            { 'index': 3, 'text': 'Info', 'type': 'loglevel', 'value': 'Info' },
+            { 'index': 4, 'text': 'Warn', 'type': 'loglevel', 'value': 'Warn' },
+            { 'index': 5, 'text': 'Error', 'type': 'loglevel', 'value': 'Error' },
+            { 'index': 6, 'text': 'Fatal', 'type': 'loglevel', 'value': 'Fatal' },
+            { 'index': 7, 'text': 'Cancel', 'type': 'cancel' }
+        ]
+
+        while True:
+            print('Agent ID: {0}'.format(active_agent_id))
+
+            selection = cloudbackup.utils.menus.promptSelection(
+                agent_log_menu,
+                'Selection Action'
+            )
+
+            if selection['type'] == 'returnToPrevious':
+                return
+
+            elif selection['type'] == 'actionGetLogLevel':
+                current_log_level = self.agents.loglevel.GetLogLevel(
+                    active_agent_id
+                )
+                print('\tActive Log Level: {0}'.format(current_log_level))
+
+            elif selection['type'] == 'actionSetLogLevel':
+                log_level_selection = cloudbackup.utils.menus.promptSelection(
+                    agent_log_level_menu,
+                    'Select Log Level'
+                )
+
+                if log_level_selection['type'] == 'cancel':
+                    pass
+
+                elif log_level_selection['type'] == 'loglevel':
+                    print('Attempting to set log level to {0}'.format(
+                        log_level_selection['text']
+                    ))
+                    if not self.agents.loglevel.SetLogLevel(
+                            active_agent_id,
+                            log_level_selection['value']
+                            ):
+                        self.log.debug('Failed to set log level')
+                        print('Failed to set log level')
+
+            elif selection['type'] == 'actionGetLogData':
+                pass
 
     def WorkOnAgent(self, active_agent_id):
         # do the negative test so that we can dedicate more space to the
@@ -1120,23 +887,30 @@ class CloudBackupApiShell(object):
             print(msg)
 
         else:
-            print('Attempting to wake the agent...')
-            self.rse = cloudbackup.client.rse.Rse(
-                'cloudbackup-sdk-shell',
-                '1.0',
-                self.auth_engine,
-                self.agents,
-                None,
-                apihost=self.api['uri'],
-                api_version=self.api['version'],
-                project_id=self.auth_engine.AuthTenantId
+            woke_agent = False
+            should_wake_agent = cloudbackup.utils.menus.promptYesNoCancel(
+                'Wake agent?'
+                ''
             )
-            self.agents.WakeSpecificAgent(
-                active_agent_id,
-                self.rse,
-                1000,
-                keep_agent_awake=True
-            )
+            if should_wake_agent == 'Yes':
+                print('Attempting to wake the agent...')
+                self.rse = cloudbackup.client.rse.Rse(
+                    'cloudbackup-sdk-shell',
+                    '1.0',
+                    self.auth_engine,
+                    self.agents,
+                    None,
+                    apihost=self.api['uri'],
+                    api_version=self.api['version'],
+                    project_id=self.auth_engine.AuthTenantId
+                )
+                self.agents.WakeSpecificAgent(
+                    active_agent_id,
+                    self.rse,
+                    1000,
+                    keep_agent_awake=True
+                )
+                woke_agent = True
 
             continue_specific_agent_config = True
             agent_details = self.agents.AgentDetails(active_agent_id)
@@ -1148,9 +922,11 @@ class CloudBackupApiShell(object):
                 # menu
                 agent_detail_menu = [
                     { 'index': 1, 'text': 'Show Details', 'type': 'details' },
-                    { 'index': 2, 'text': 'Access Configuration', 'type': 'configuration' },
-                    { 'index': 3, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
-                    { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+                    { 'index': 2, 'text': 'Log Configuration', 'type': 'actionLog' },
+                    { 'index': 3, 'text': 'Access Backup Configurations', 'type': 'configuration' },
+                    { 'index': 4, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
+                    { 'index': 5, 'text': 'Monitor Agent Events', 'type': 'actionMonitorAgent' },
+                    { 'index': 6, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
                 ]
 
                 selection = cloudbackup.utils.menus.promptSelection(
@@ -1178,15 +954,22 @@ class CloudBackupApiShell(object):
                         print('\t\t{0}'.format(ipv4_address))
                     print('\n')
 
+                elif selection['type'] == 'actionLog':
+                    self.WorkOnAgentLog(active_agent_id)
+
                 elif selection['type'] == 'configuration':
                     self.WorkOnAgentConfiguration(active_agent_id)
 
                 elif selection['type'] == 'actionCheckActivity':
                     self.doPrintLatestAgentActivity(active_agent_id)
 
-            # stop our thread that is keeping the agent alive
-            print('Allowing the agent to throttle down...')
-            self.agents.StopKeepAgentWake(active_agent_id)
+                elif selection['type'] == 'actionMonitorAgent':
+                    self.doMonitorAgent(active_agent_id)
+
+            if woke_agent:
+                # stop our thread that is keeping the agent alive
+                print('Allowing the agent to throttle down...')
+                self.agents.StopKeepAgentWake(active_agent_id)
 
     def doShell(self):
         while True:
@@ -1198,44 +981,3 @@ class CloudBackupApiShell(object):
             else:
                 self.WorkOnAgent(agent_selection['text'])
 
-
-def main():
-    return_value = 0
-
-    argument_parser = argparse.ArgumentParser(description='Cloud Backup Api Shell')
-    argument_parser.add_argument('--user-config', default=None, type=argparse.FileType('r'), required=True, help='JSON file containing username and API Key')
-    argument_parser.add_argument('-dc', '--datacenter', default='ord', type=str, required=True, help='Datacenter the system is in', choices=['lon', 'syd', 'hkg', 'ord', 'iad', 'dfw'])
-    argument_parser.add_argument('-lg', '--log-config', default=None, type=str, dest='logconfig', help='log configuration file')
-    argument_parser.add_argument('--use-snet', default=False, action='store_true', help='Use Service Net instead of Public Net')
-
-    arguments = argument_parser.parse_args()
-
-    # If the caller provides a log configuration then use it
-    # Otherwise we'll add our own little configuration as a default
-    # That captures stdout and outputs to .agent_unique_constraint_fix-py.log
-    if arguments.logconfig is not None:
-        logging.config.fileConfig(arguments.logconfig)
-    else:
-        lf = logging.FileHandler('.rackspace-cloud-backup-api-shell.log')
-        lf.setLevel(logging.DEBUG)
-
-        log = logging.getLogger()
-        log.addHandler(lf)
-        log.setLevel(logging.DEBUG)
-
-    log = logging.getLogger()
-
-    shell = CloudBackupApiShell(
-        log,
-        arguments.user_config,
-        arguments.datacenter,
-        use_servicenet=arguments.use_snet
-    )
-
-    return_value = shell.doShell()
-
-    return return_value
-
-
-if __name__ == "__main__":
-    sys.exit(main())

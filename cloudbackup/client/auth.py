@@ -266,6 +266,15 @@ class Authentication(Command):
             return True
 
     @property
+    def InitialAuthCredentials(self):
+        return {
+            'userid': self.parameters['userid'],
+            'usertype': self.parameters['usertype'],
+            'credentials': self.parameters['credentials'],
+            'method': self.parameters['method']
+        }
+
+    @property
     def AuthToken(self):
         """
         Retrieve the cached Authentication Token
@@ -354,7 +363,7 @@ class Authentication(Command):
     @property
     def AllCredentials(self, get_credentials=False):
         """
-        Retrieve the various user's credential for different methos of auth
+        Retrieve the various user's credential for different methods of auth
 
         get_credentials - whether or not to list or get the credentials
 

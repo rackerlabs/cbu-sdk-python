@@ -984,7 +984,7 @@ class BackupConfigurationV2(object):
             self.backup_config['inclusions'].append(template)
 
     @staticmethod
-    def convert_backup_report_to_v1(v2_report):
+    def convert_backup_report_to_v1(v2_report, v2_error_data=None):
 
         status_map = {}
         status_map['completed'] = 'Completed'
@@ -1023,6 +1023,10 @@ class BackupConfigurationV2(object):
         o['BackupId'] = v2_report['id']
         # TODO(jc7998): errors should also be processed
         o['ErrorList'] =  v2_report['errors']
+        if v2_error_data is None:
+            o['ErrorList']['Errors'] = None
+        else:
+            o['ErrorList']['Errors'] = v2_error_data
         try:
             o['NumErrors'] = v2_report['errors']['count']
         except:
@@ -1366,6 +1370,50 @@ class Backups(Command):
                 if (current_state in stoplist):
                     break
 
+    def GetAllBackupsForConfiguration(self, backup_config_id):
+        '''
+        Retrieve all the backups - in any state - for a given Backup Configuration
+        '''
+        if self.api_version == 1:
+            raise NotImplemented('Not Yet implemented on API v1')
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/configurations/{2}/activities'
+                        .format(
+                            self.api_version,
+                            self.project_id,
+                            backup_config_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['X-Project-Id'] = self.project_id
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code is 200:
+                resp_json = res.json()
+                activities = resp_json['activities']
+                backups = []
+                for activity in activities:
+                    if activity['type'] == 'backup':
+                        backups.append(
+                            {
+                                'id': activity['id'],
+                                'state': activity['state'],
+                                'agent': activity['agent'],
+                                'updated_at': activity['last_updated_time']
+                            }
+                        )
+
+                return backups
+
+            else:
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return []
+
 
     def GetCompletedBackups(self, backup_config_id):
         '''
@@ -1504,12 +1552,44 @@ class Backups(Command):
             self.headers['Content-Type'] = 'application/json'
             res = requests.get(self.Uri, headers=self.Headers)
             if res.status_code == 200:
+                error_data = None
+                json_data = res.json()
+                try:
+                    if json_data['errors']['count'] > 0:
+                        error_data = self.GetBackupErrors(backup_id)
+                except:
+                    error_data = None
+
                 # convert the response to an object that matches the
                 # information returned by v1
                 return BackupConfigurationV2.convert_backup_report_to_v1(
-                        res.json())
+                        json_data, error_data)
             else:
                 msg = ('Unable to retrieve backup report for backup id ({0:}).'
+                       ' RCBU API returned error status ({1:}) with text '
+                       '({2:}) with reason ({3:})'
+                       .format(backup_id, res.status_code, res.text,
+                               res.reason))
+                self.log.error(msg)
+                raise RuntimeError(msg)
+
+    def GetBackupErrors(self, backup_id):
+        if self.api_version == 1:
+            raise NotImplemented('Not implemented for v1')
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/backups/{2}/errors'
+                        .format(self.api_version, self.project_id, backup_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['X-Project-Id'] = self.project_id
+            self.headers['Content-Type'] = 'application/json'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                return res.json()
+
+            else:
+                msg = ('Unable to retrieve backup errors for backup id ({0:}).'
                        ' RCBU API returned error status ({1:}) with text '
                        '({2:}) with reason ({3:})'
                        .format(backup_id, res.status_code, res.text,
