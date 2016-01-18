@@ -1130,6 +1130,65 @@ class Backups(Command):
                 'or not an appropriate instance for the API version'
             )
 
+    def EnableDisableBackupConfiguration(self, agent_id, backup_config_id, enabled):
+        """
+        Enable/Disable a Backup Configuration
+        """
+        if self.api_version == 1:
+            self.ReInit(
+                self.sslenabled,
+                '/v1.0/{0}/backup-configuration/enable/{1}'.format(
+                    self.authenticator.AuthTenantId,
+                    backup_config_id
+                )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json'
+            config_change = {
+                'Enabled': enabled
+            }
+            self.body = json.dumps(config_change)
+            self.log.debug('sending: {0}'.format(self.body))
+            res = requests.post(self.Uri, headers=self.Headers,
+                                data=self.Body)
+            if res.status_code is 200:
+                ret = res.json()
+                return True
+            else:
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return False
+
+        else:
+            self.ReInit(
+                self.sslenabled,
+                '/v{0}/{1}/configurations/{2}'.format(
+                    self.api_version,
+                    self.project_id,
+                    backup_config_id
+                )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+            o = [
+                {
+                    'op': 'replace',
+                    'path': '/enabled',
+                    'value': enabled
+                }
+            ]
+            self.body = json.dumps(o)
+            self.log.debug('Updating Log Level: {0}'.format(o))
+            res = requests.patch(self.Uri, headers=self.Headers, data=self.Body)
+            if res.status_code == 204:
+                self.log.info('Updated configuration enabled status to {0}'.format(enabled))
+                return True
+            else:
+                self.log.error('Unable to set configuration enabled status. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
+                return False
+
     def RetrieveBackupConfiguration(self, backup_config_id):
         """
         Retrieve the specific backup configuration from the API

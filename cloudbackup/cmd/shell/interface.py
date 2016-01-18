@@ -599,13 +599,154 @@ class CloudBackupApiShell(object):
                 except KeyboardInterrupt:
                     break
 
+    def RetrieveBackupReports(self, active_agent_id, config_id):
+        while True:
+            # Get the latest set of backups so the menu is always up-to-date
+            all_backups = self.backup_engine.GetAllBackupsForConfiguration(
+                active_agent_id,
+                config_id
+            )
+
+            backup_config_menu = []
+            for backup_entry in all_backups:
+                backup_config_menu.append(
+                    {
+                        'index': len(backup_config_menu),
+                        'text': '{0} - {2} - {1}'.format(
+                            backup_entry['id'],
+                            backup_entry['state'],
+                            backup_entry['updated_at']
+                        ),
+                        'type': 'backup_id',
+                        'backup_id': backup_entry['id']
+                    }
+                )
+            backup_config_menu.append(
+                {
+                    'index': len(backup_config_menu),
+                    'text': 'Return to previous menu',
+                    'type': 'returnToPrevious'
+                }
+            )
+
+            backup_config_selection = cloudbackup.utils.menus.promptSelection(
+                backup_config_menu,
+                'Select Backup'
+            )
+            if backup_config_selection['type'] == 'returnToPrevious':
+                break
+
+            elif backup_config_selection['type'] == 'backup_id':
+                backup_report = self.backup_engine.GetBackupReport(
+                    backup_config_selection['backup_id']
+                )
+                report_data = json.dumps(
+                    backup_report,
+                    sort_keys=True,
+                    indent=4
+                )
+                print(report_data)
+                cloudbackup.utils.menus.promptUserAnyKey()
+
+    def EnableDisableSpecificAgentConfiguration(self, active_agent_id, config_id):
+        while True:
+            try:
+                # update the agent configuration
+                self.agents.GetAgentConfiguration(
+                    active_agent_id
+                )
+                # access the backup configuration
+                backup_config = self.agents.AgentConfiguration(
+                    active_agent_id
+                ).GetBackupConfigurationById(
+                    config_id
+                )
+            except:
+                backup_config = None
+
+            if backup_config is None:
+                print('Backup Config no longer accessible.')
+                return
+
+            backup_config_enabled = False
+            if self.api['version'] == 1:
+                backup_config_enabled = backup_config['IsEnabled']
+            else:
+                backup_config_enabled = backup_config['enabled']
+
+            current_state = 'Enabled' if backup_config_enabled else 'Disabled'
+            config_state_entry = {
+                'index': 0,
+                'text': 'Disable Configuration',
+                'type': 'stateChange',
+                'value': False
+            }
+            if backup_config_enabled:
+                config_state_entry['text'] = 'Disable Configuration'
+                config_state_entry['value'] = False
+
+            else:
+                config_state_entry['text'] = 'Enable Configuration'
+                config_state_entry['value'] = True
+
+            enable_disable_menu = [
+                config_state_entry,
+                { 'index': 1, 'text': 'Update Configuration State', 'type': 'updateState' },
+                { 'index': 2, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+            ]
+
+            print('Current Configuration State: {0}'.format(current_state))
+            selection = cloudbackup.utils.menus.promptSelection(
+                enable_disable_menu,
+                'Select Action'
+            )
+
+            if selection['type'] == 'returnToPrevious':
+                return
+
+            elif selection['type'] == 'updateState':
+                # nothing to do, we'll update automatically on next loop
+                # this just makes it so the user doesn't get an input error
+                continue
+
+            elif selection['type'] == 'stateChange':
+                if self.backup_engine.EnableDisableBackupConfiguration(
+                    active_agent_id,
+                    config_id,
+                    selection['value']
+                ):
+                    print('Configuration status updated')
+
+                else:
+                    print('Failed to update configuration status')
+
+    def DeleteBackupConfiguration(self, active_agent_id, config_id):
+        verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
+            'Confirm Delete Configuration {0} - {1}'.format(
+                config_id,
+                config_name
+            )
+        )
+        if verify_delete == 'Yes':
+            print('Deleting configuration...')
+            if self.backup_engine.DeleteBackupConfiguration(
+                    config_id):
+                # Config no longer exists, so return to previous menu
+                return
+            else:
+                print('Failed to delete configuration. See log for details')
+
+        else:
+            print('Canceling deletion of configuration.')
+
     def WorkOnSpecificAgentConfiguration(self, active_agent_id, config_id, config_name):
         specific_config_menu = [
             { 'index': 0, 'text': 'Run', 'type': 'actionRun' },
             { 'index': 1, 'text': 'Show', 'type': 'actionShow' },
             { 'index': 2, 'text': 'Check Status', 'type': 'actionCheckStatus'},
-            { 'index': 3, 'text': 'Get Backup Reports', 'type': 'actionGetBackupReports'},
-            { 'index': 4, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
+            { 'index': 3, 'text': 'Enable/Disable Configuration', 'type': 'actionEnableDisable'},
+            { 'index': 4, 'text': 'Get Backup Reports', 'type': 'actionGetBackupReports'},
+            { 'index': 5, 'text': 'Return to previous menu', 'type': 'returnToPrevious' },
             { 'index': 99, 'text': 'Delete', 'type': 'actionDelete' }
         ]
 
@@ -685,73 +826,22 @@ class CloudBackupApiShell(object):
                         print('Error retrieving snapshot state: {0}'.format(ex))
 
             elif selection['type'] == 'actionGetBackupReports':
+                self.RetrieveBackupReports(
+                    active_agent_id,
+                    config_id
+                )
 
-                while True:
-                    # Get the latest set of backups so the menu is always up-to-date
-                    all_backups = self.backup_engine.GetAllBackupsForConfiguration(
-                        active_agent_id,
-                        config_id
-                    )
-
-                    backup_config_menu = []
-                    for backup_entry in all_backups:
-                        backup_config_menu.append(
-                            {
-                                'index': len(backup_config_menu),
-                                'text': '{0} - {2} - {1}'.format(
-                                    backup_entry['id'],
-                                    backup_entry['state'],
-                                    backup_entry['updated_at']
-                                ),
-                                'type': 'backup_id',
-                                'backup_id': backup_entry['id']
-                            }
-                        )
-                    backup_config_menu.append(
-                        {
-                            'index': len(backup_config_menu),
-                            'text': 'Return to previous menu',
-                            'type': 'returnToPrevious'
-                        }
-                    )
-
-                    backup_config_selection = cloudbackup.utils.menus.promptSelection(
-                        backup_config_menu,
-                        'Select Backup'
-                    )
-                    if backup_config_selection['type'] == 'returnToPrevious':
-                        break
-
-                    elif backup_config_selection['type'] == 'backup_id':
-                        backup_report = self.backup_engine.GetBackupReport(
-                            backup_config_selection['backup_id']
-                        )
-                        report_data = json.dumps(
-                            backup_report,
-                            sort_keys=True,
-                            indent=4
-                        )
-                        print(report_data)
-                        cloudbackup.utils.menus.promptUserAnyKey()
+            elif selection['type'] == 'actionEnableDisable':
+                self.EnableDisableSpecificAgentConfiguration(
+                    active_agent_id,
+                    config_id
+                )
 
             elif selection['type'] == 'actionDelete':
-                verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
-                    'Confirm Delete Configuration {0} - {1}'.format(
-                        config_id,
-                        config_name
-                    )
+                self.DeleteBackupConfiguration(
+                    active_agent_id,
+                    config_id
                 )
-                if verify_delete == 'Yes':
-                    print('Deleting configuration...')
-                    if self.backup_engine.DeleteBackupConfiguration(
-                            config_id):
-                        # Config no longer exists, so return to previous menu
-                        return
-                    else:
-                        print('Failed to delete configuration. See log for details')
-
-                else:
-                    print('Canceling deletion of configuration.')
 
     def WorkOnAgentConfiguration(self, active_agent_id):
         while True:
