@@ -463,11 +463,12 @@ class Authentication(Command):
                         else:
                             dcuri = endpoint['publicURL']
 
-                        # b/c the service catalog end-point is presently broken
-                        # we have to hard code it
-                        dcuri = 'https://api-prod-global.drivesrvr.com/v2/{0}'.format(
-                            self.AuthTenantId
-                        )
+                        if self._GetCloudBackupAPiVersion(dcuri) > 1:
+                            # b/c the service catalog end-point is presently broken
+                            # we have to hard code it
+                            dcuri = 'https://api-prod-global.drivesrvr.com/v2/{0}'.format(
+                                self.AuthTenantId
+                            )
                     else:
                         # DC-specific End-Points
                         for endpoint in service['endpoints']:
@@ -511,8 +512,9 @@ class Authentication(Command):
             self.log.error(msg)
             raise AuthenticationError(msg)
 
-    def GetCloudBackupApiVersion(self, dc, useServiceNet=False):
-        cloudbackup_api_uri = self.GetCloudBackupApiUrl(dc, useServiceNet)
+    def _GetCloudBackupAPiVersion(self, cloudbackup_api_uri):
+        self.log.debug('Detecting Cloud Backup API Version...')
+        self.log.debug('API URI: {0}'.format(cloudbackup_api_uri))
         api_regex = "https://([^/]*)/v([0-9]*)([.]?)([^/]*)/([^/]*).*"
         self.log.debug('Matching {0} with {1}'.format(
             cloudbackup_api_uri,
@@ -521,4 +523,10 @@ class Authentication(Command):
         regex_matcher = re.compile(api_regex)
         result = regex_matcher.match(cloudbackup_api_uri)
         api_version = result.groups()[1]
+        self.log.debug('API Version: {0}'.format(api_version))
         return int(api_version)
+
+    def GetCloudBackupApiVersion(self, dc, useServiceNet=False):
+        self.log.debug('Detecting Cloud Backup API Version...')
+        cloudbackup_api_uri = self.GetCloudBackupApiUrl(dc, useServiceNet)
+        return self._GetCloudBackupAPiVersion(cloudbackup_api_uri)

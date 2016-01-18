@@ -219,3 +219,12 @@ def promptUserInputNumber(prompt, prefix='', min_value=0, max_value=99999, show_
         return None
     else:
         return int(user_result)
+
+
+def promptUserAnyKey(prompt='Press any key to continue'):
+    """Prompt user to press any key as a delay or paging method"
+    """
+    if six.PY2:
+        raw_input(prompt)
+    else:
+        input(prompt)

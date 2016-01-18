@@ -77,10 +77,12 @@ class CloudBackupApiShell(object):
             self.datacenter,
             self.use_servicenet
         )
+        self.log.debug('Cloud Backup API URI: {0}'.format(self.api['uri']))
         self.api['version'] = self.auth_engine.GetCloudBackupApiVersion(
             self.datacenter,
             self.use_servicenet
         )
+        self.log.debug('Cloud Backup API Version: {0}'.format(self.api['version']))
         # TODO: Add support for Test/Pre-Prod API
 
         self.agents = cloudbackup.client.agents.Agents(
@@ -687,6 +689,7 @@ class CloudBackupApiShell(object):
                 while True:
                     # Get the latest set of backups so the menu is always up-to-date
                     all_backups = self.backup_engine.GetAllBackupsForConfiguration(
+                        active_agent_id,
                         config_id
                     )
 
@@ -729,6 +732,7 @@ class CloudBackupApiShell(object):
                             indent=4
                         )
                         print(report_data)
+                        cloudbackup.utils.menus.promptUserAnyKey()
 
             elif selection['type'] == 'actionDelete':
                 verify_delete = cloudbackup.utils.menus.promptYesNoCancel(
