@@ -1370,12 +1370,40 @@ class Backups(Command):
                 if (current_state in stoplist):
                     break
 
-    def GetAllBackupsForConfiguration(self, backup_config_id):
+    def GetAllBackupsForConfiguration(self, agent_id, backup_config_id):
         '''
         Retrieve all the backups - in any state - for a given Backup Configuration
         '''
         if self.api_version == 1:
-            raise NotImplemented('Not Yet implemented on API v1')
+            self.ReInit(self.sslenabled,
+                        '/v1.0/{0}/system/activity/{1}'
+                        .format(
+                            self.authenticator.AuthTenantId,
+                           agent_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code is 200:
+                backups = []
+                for activity in res.json():
+                    if activity['Type'] == 'Backup':
+                        if activity['ParentId'] == backup_config_id:
+                            backups.append(
+                                {
+                                    'id': activity['ID'],
+                                    'state': activity['CurrentState'],
+                                    'agent': activity['SourceMachineAgentId'],
+                                    'updated_at': activity['TimeOfActivity']
+                                }
+                            )
+                return backups
+
+            else:
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return []
 
         else:
             self.ReInit(self.sslenabled,
