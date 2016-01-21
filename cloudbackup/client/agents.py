@@ -25,13 +25,13 @@ class ParameterError(Exception):
 
 
 # function for Agents class to use to keep a given agent awake
-def _keep_agent_wake_thread_fn(my_notifier=None, userid=None, usertype=None,
-                               credentials=None, method=None,
-                               rse_app=None, rse_version=None,
-                               rse_agentkey=None, rse_log=None,
-                               rse_apihost=None, rse_period=None, apihost=None,
-                               agent_id=None, api_version=None,
-                               project_id=None):
+def _keep_agent_awake_thread_fn(my_notifier=None, userid=None, usertype=None,
+                                credentials=None, method=None,
+                                rse_app=None, rse_version=None,
+                                rse_agentkey=None, rse_log=None,
+                                rse_apihost=None, rse_period=None, apihost=None,
+                                agent_id=None, api_version=None,
+                                project_id=None):
     """
     (Internal) Thread function that will periodically post the wake agent message and look for the specified agent
     Aside from my_notifier, the function maintains its own objects internally in thread local data storage for thread-safety purposes
@@ -82,7 +82,7 @@ def _keep_agent_wake_thread_fn(my_notifier=None, userid=None, usertype=None,
         if api_version is None:
             msg_missing.append('api_version')
 
-        raise RuntimeError('Invalid parameters. Some optional parameters were not properly specified. Missing parameters: {0}'.format(msg_missing))
+        raise RuntimeError('Invalid parameters. Some required parameters were not properly specified. Missing parameters: {0}'.format(msg_missing))
 
     if api_version > 1:
         if project_id is None:
@@ -98,8 +98,8 @@ def _keep_agent_wake_thread_fn(my_notifier=None, userid=None, usertype=None,
     data.thread_id = threading.current_thread().ident
     data.log_prefix = 'RSE Wakeup Thread[{0:}] Log'.format(data.thread_id)
     data.auth_engine = cloudbackup.client.auth.Authentication(
-        user,
-        apikey,
+        userid,
+        credentials,
         usertype=usertype,
         method=method
     )
@@ -1133,7 +1133,7 @@ class Agents(Command):
                     'rse_log': rse.rselogfile,
                     'rse_apihost': rse.apihost
                 }
-                a_thread['thread'] = threading.Thread(target=_keep_agent_wake_thread_fn,
+                a_thread['thread'] = threading.Thread(target=_keep_agent_awake_thread_fn,
                                                       kwargs=a_thread_kwargs
                 )
                 a_thread['thread'].start()

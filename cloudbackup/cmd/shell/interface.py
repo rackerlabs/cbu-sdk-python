@@ -988,12 +988,19 @@ class CloudBackupApiShell(object):
             )
             if should_wake_agent == 'Yes':
                 print('Attempting to wake the agent...')
+                self.agents.GetAgentConfiguration(
+                    active_agent_id
+                )
+
+                agent_configuration = self.agents.AgentConfiguration(
+                    active_agent_id
+                )
                 self.rse = cloudbackup.client.rse.Rse(
                     'cloudbackup-sdk-shell',
                     '1.0',
                     self.auth_engine,
                     self.agents,
-                    None,
+                    agent_configuration.RseChannel,
                     apihost=self.api['uri'],
                     api_version=self.api['version'],
                     project_id=self.auth_engine.AuthTenantId
