@@ -1248,6 +1248,186 @@ class Agents(Command):
             raise AgentDetailsNotAvailable(msg)
 
     #
+    # Agent Logs
+    #
+    def GetAgentLogFile(self, machine_agent_id):
+        """
+        Request a log file upload from the agent
+        """
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/agent/requestlog/{0}'.format(
+                            machine_agent_id
+                        ))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+            res = requests.post(self.Uri, headers=self.Headers)
+
+            if res.status_code == 200:
+                self.log.info('Returned JSON data: {0}'.format(res.json()))
+                print('Returned JSON data: {0}'.format(res.json()))
+                return None
+
+            else:
+                self.log.error('Unable to request agent log file upload for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
+                return None
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}/logfiles'.format(
+                            self.api_version,
+                            self.project_id,
+                            machine_agent_id
+                        ))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
+            res = requests.post(self.Uri, headers=self.Headers)
+
+            if res.status_code == 202:
+                logfile_request_id = res.json()['id']
+                return logfile_request_id
+                    
+            else:
+                self.log.error('Unable to request agent log file upload for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
+                return None
+
+    def GetExistingAgentLogFiles(self, machine_agent_id):
+        """
+        List the existing agent log files
+        """
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/agent/requestlog/{0}'.format(
+                            machine_agent_id
+                        ))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/agents/{2}/logfiles'.format(
+                            self.api_version,
+                            self.project_id,
+                            machine_agent_id
+                        ))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+            self.headers['X-Project-Id'] = self.project_id
+
+        res = requests.get(self.Uri, headers=self.Headers)
+
+        result = []
+        if res.status_code == 200:
+            if self.api_version == 1:
+                self.log.info('Returned JSON data: {0}'.format(res.json()))
+                print('Returned JSON data: {0}'.format(res.json()))
+
+            else:
+                for logfile_entry in res.json()['logfiles']:
+                    e = {
+                        'id': logfile_entry['id'],
+                        'date': logfile_entry['date'],
+                        'status': logfile_entry['state'],
+                        'link': None
+                    }
+
+                    # Note: rel == logfile_temp_url is only present
+                    #       if the file has been uploaded
+                    for url_set in logfile_entry['links']:
+                        if url_set['rel'] == 'logfile_temp_url':
+                            e['link'] = url_set['href']
+                    result.append(e)
+
+
+        else:
+            self.log.error('Unable to list uploaded agent log files for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
+
+        return result
+
+    def DownloadAgentLogFile(self, logfile_data, target_filename):
+        try:
+            try:
+                headers = {
+                    'X-Auth-Token': self.authenticator.AuthToken
+                }
+                res = requests.get(
+                    logfile_data['link'],
+                    stream=True,
+                    headers=self.headers
+                )
+            except requests.exceptions.SSLError as ex:
+                self.log.error('Requests SSLError: {0}'.format(str(ex)))
+                res = requests.get(logfile_data['link'], verify=False, stream=True)
+
+            if res.status_code == 404:
+                raise UserWarning('Temp URL invalid')
+
+            elif res.status_code >= 300:
+                raise UserWarning('Server responded unexpectedly during download (Code: ' + str(res.status_code) + ' )')
+
+            file_chunk_size = 4 * 1024 * 1024
+            etag_match = None
+            if 'Etag' in res.headers:
+                etag_match = res.headers['Etag']
+
+            meter = {}
+            meter['bytes-total'] = int(res.headers['Content-Length'])
+            meter['bytes-remaining'] = int(res.headers['Content-Length'])
+            meter['bar-count'] = 50
+            meter['bytes-per-bar'] = meter['bytes-remaining'] // meter['bar-count']
+            meter['block-size'] = min(file_chunk_size, meter['bytes-per-bar'])
+            meter['chunks-per-bar'] = meter['bytes-per-bar'] // meter['block-size']
+            meter['chunks'] = 0
+            meter['bars-remaining'] = meter['bar-count']
+            meter['bars-completed'] = 0
+            self.log.info('Downloading logfile(gz): {0} bytes...'.format(meter['bytes-remaining']))
+            self.log.info('[' + ' ' * meter['bar-count'] + ']')
+            gzip_file = target_filename + '.gz'
+            compressed_md5_hash = hashlib.md5()
+            with open(gzip_file, 'wb') as gzipped_db:
+                for lf_chunk in res.iter_content(chunk_size=meter['block-size']):
+                    gzipped_db.write(lf_chunk)
+                    compressed_md5_hash.update(lf_chunk)
+                    gzipped_db.flush()
+                    os.fsync(gzipped_db.fileno())
+                    meter['chunks'] += 1
+                    if meter['chunks'] == meter['chunks-per-bar']:
+                        meter['chunks'] = 0
+                        meter['bars-completed'] += 1
+                        meter['bars-remaining'] -= 1
+                        self.log.info('[' + '-' * meter['bars-completed'] + ' ' * meter['bars-remaining'] + ']')
+
+            if etag_match is not None:
+                if etag_match.upper() != compressed_md5_hash.hexdigest().upper():
+                    raise UserWarning(
+                        'Failed to download. {0} != {1}'.format(
+                            etag_match.upper(),
+                            compressed_md5_hash.hexdigest().upper()
+                        )
+                    )
+
+            self.log.info('Decompressing the file...')
+            gz_lf_file = gzip.open(gzip_file, 'rb')
+            with open(localpath, 'wb') as lf_file:
+                decompress_continue_loop = True
+                while decompress_continue_loop:
+                    filechunk = gz_lf_file.read(file_chunk_size)
+                    if len(filechunk) == 0:
+                        decompress_continue_loop = False
+                    else:
+                        lf_file.write(filechunk)
+            gz_lf_file.close()
+            return True
+
+        except Exception as ex:
+            self.log.error('Failed to download file: {0}'.format(ex))
+            return False
+        
+
+    #
     # Agent Configurations
     #
     def GetAgentConfiguration(self, machine_agent_id):
