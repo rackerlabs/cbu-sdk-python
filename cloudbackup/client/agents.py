@@ -4,8 +4,11 @@ Rackspace Cloud Backup Agent API
 from __future__ import print_function
 
 import datetime
+import gzip
+import hashlib
 import json
 import logging
+import os
 import requests
 import time
 import threading
@@ -1265,9 +1268,8 @@ class Agents(Command):
             res = requests.post(self.Uri, headers=self.Headers)
 
             if res.status_code == 200:
-                self.log.info('Returned JSON data: {0}'.format(res.json()))
-                print('Returned JSON data: {0}'.format(res.json()))
-                return None
+                logfile_request_id = res.json()
+                return logfile_request_id
 
             else:
                 self.log.error('Unable to request agent log file upload for agent id ' + str(machine_agent_id) + '. Server returned ' + str(res.status_code) + ': ' + res.text + ' Reason: ' + res.reason)
@@ -1300,7 +1302,7 @@ class Agents(Command):
         """
         if self.api_version == 1:
             self.ReInit(self.sslenabled,
-                        '/v1.0/agent/requestlog/{0}'.format(
+                        '/v1.0/agent/logfiles/{0}'.format(
                             machine_agent_id
                         ))
             self.headers['X-Auth-Token'] = self.authenticator.AuthToken
@@ -1322,8 +1324,14 @@ class Agents(Command):
         result = []
         if res.status_code == 200:
             if self.api_version == 1:
-                self.log.info('Returned JSON data: {0}'.format(res.json()))
-                print('Returned JSON data: {0}'.format(res.json()))
+                for logfile_entry in res.json():
+                    e = {
+                        'id': logfile_entry['DisplayName'],
+                        'date': logfile_entry['DisplayName'],
+                        'status': logfile_entry['CurrentState'],
+                        'link': logfile_entry['FilePath']
+                    }
+                    result.append(e)
 
             else:
                 for logfile_entry in res.json()['logfiles']:
@@ -1411,7 +1419,7 @@ class Agents(Command):
 
             self.log.info('Decompressing the file...')
             gz_lf_file = gzip.open(gzip_file, 'rb')
-            with open(localpath, 'wb') as lf_file:
+            with open(target_filename, 'wb') as lf_file:
                 decompress_continue_loop = True
                 while decompress_continue_loop:
                     filechunk = gz_lf_file.read(file_chunk_size)

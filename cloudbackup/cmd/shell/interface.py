@@ -969,18 +969,21 @@ class CloudBackupApiShell(object):
                 return
 
             elif selection['type'] == 'logfile':
-                download_output_filename = cloudbackup.utils.menus.promptUserInputString(
-                    'Output Filename',
-                    ''
-                )
-                if download_output_filename is not None:
-                    print('Downloading file to {0}'.format(download_output_filename))
-                    successful_download = self.agents.DownloadAgentLogFile(
-                        selection['value'],
-                        download_output_filename
+                if selection['value']['status'] in ('Finished', 'completed'):
+                    download_output_filename = cloudbackup.utils.menus.promptUserInputString(
+                        'Output Filename',
+                        ''
                     )
-                    if not successful_download:
-                        print('Failed to download log file.')
+                    if download_output_filename is not None:
+                        print('Downloading file to {0}'.format(download_output_filename))
+                        successful_download = self.agents.DownloadAgentLogFile(
+                            selection['value'],
+                            download_output_filename
+                        )
+                        if not successful_download:
+                            print('Failed to download log file.')
+                else:
+                    print('File not ready for download')
 
             elif selection['type'] == 'actionRequestLogFile':
                 log_req_result = self.agents.GetAgentLogFile(active_agent_id)
