@@ -911,11 +911,90 @@ class CloudBackupApiShell(object):
                     selection['name']
                 )
 
+    def WorkOnAgentLogFiles(self, active_agent_id):
+        while True:
+            print('Agent ID: {0}'.format(active_agent_id))
+
+            available_log_files = self.agents.GetExistingAgentLogFiles(
+                active_agent_id
+            )
+
+            agent_logfile_menu = []
+            for log_file_entry in available_log_files:
+                entry = {
+                    'index': len(agent_logfile_menu),
+                    'type': 'logfile',
+                    'text': 'Log File[{0}] - {1}'.format(
+                            log_file_entry['date'],
+                            log_file_entry['status']
+                        ),
+                    'value': log_file_entry
+                }
+                agent_logfile_menu.append(entry)
+
+            agent_logfile_menu.append(
+                {
+                    'index': len(agent_logfile_menu),
+                    'type': 'actionRequestLogFile',
+                    'text': 'Request New Log File',
+                    'value': None
+                }
+            )
+            agent_logfile_menu.append(
+                {
+                    'index': len(agent_logfile_menu),
+                    'type': 'actionUpdate',
+                    'text': 'Update Listing',
+                    'value': None
+                }
+            )
+            agent_logfile_menu.append(
+                {
+                    'index': len(agent_logfile_menu),
+                    'type': 'returnToPrevious',
+                    'text': 'Return to previous menu',
+                    'value': None
+                }
+            )
+
+            selection = cloudbackup.utils.menus.promptSelection(
+                agent_logfile_menu,
+                'Select Action'
+            )
+
+            if selection['type'] == 'actionUpdate':
+                continue
+
+            elif selection['type'] == 'returnToPrevious':
+                return
+
+            elif selection['type'] == 'logfile':
+                if selection['value']['status'] in ('Finished', 'completed'):
+                    download_output_filename = cloudbackup.utils.menus.promptUserInputString(
+                        'Output Filename',
+                        ''
+                    )
+                    if download_output_filename is not None:
+                        print('Downloading file to {0}'.format(download_output_filename))
+                        successful_download = self.agents.DownloadAgentLogFile(
+                            selection['value'],
+                            download_output_filename
+                        )
+                        if not successful_download:
+                            print('Failed to download log file.')
+                else:
+                    print('File not ready for download')
+
+            elif selection['type'] == 'actionRequestLogFile':
+                log_req_result = self.agents.GetAgentLogFile(active_agent_id)
+                if log_req_result is None:
+                    print('Failed to request a new agent log file upload')
+
     def WorkOnAgentLog(self, active_agent_id):
         agent_log_menu = [
             { 'index': 0, 'text': 'Get Log Level', 'type': 'actionGetLogLevel' },
             { 'index': 1, 'text': 'Set Log Level', 'type': 'actionSetLogLevel' },
-            { 'index': 2, 'text': 'Request Log Upload', 'type': 'actionGetLogData' },
+            { 'index': 2, 'text': 'Log Files', 'type': 'actionLogFiles' },
             { 'index': 3, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
         ]
 
@@ -967,8 +1046,8 @@ class CloudBackupApiShell(object):
                         self.log.debug('Failed to set log level')
                         print('Failed to set log level')
 
-            elif selection['type'] == 'actionGetLogData':
-                pass
+            elif selection['type'] == 'actionLogFiles':
+                self.WorkOnAgentLogFiles(active_agent_id)
 
     def WorkOnAgent(self, active_agent_id):
         # do the negative test so that we can dedicate more space to the
