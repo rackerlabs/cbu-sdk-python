@@ -4,6 +4,8 @@ import logging
 import logging.config
 import sys
 
+import cloudbackup.cmd.shell.config
+
 def main():
     return_value = 0
 
@@ -30,12 +32,29 @@ def main():
 
     log = logging.getLogger()
 
+    commandLineData = {
+        'user': {
+            'type': None,
+            'id': None,
+        },
+        'auth': {
+            'method': None,
+            'value': None
+        }
+    }
+
+    config_obj = cloudbackup.cmd.shell.config.CloudBackupFileConfig(
+        arguments.user_config,
+        log,
+        commandLineData=commandLineData
+    )
+
     from cloudbackup.cmd.shell.interface import CloudBackupApiShell
     shell = CloudBackupApiShell(
         log,
-        arguments.user_config,
         arguments.datacenter,
-        use_servicenet=arguments.use_snet
+        use_servicenet=arguments.use_snet,
+        config_obj = config_obj
     )
 
     return_value = shell.doShell()

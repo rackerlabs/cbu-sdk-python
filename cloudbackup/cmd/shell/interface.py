@@ -14,6 +14,7 @@ import cloudbackup.client.agents
 import cloudbackup.client.auth
 import cloudbackup.client.backup
 import cloudbackup.client.rse
+import cloudbackup.cmd.shell.config
 import cloudbackup.cmd.shell.exceptions
 import cloudbackup.cmd.shell.prompter as prompt_user
 import cloudbackup.utils.menus
@@ -21,54 +22,41 @@ from cloudbackup.utils import tz
 
 class CloudBackupApiShell(object):
 
-    def __init__(self, logger, auth_data_file, datacenter, use_servicenet=False):
+    def __init__(self, logger, datacenter, use_servicenet=False, config_obj=None, auth_data_file=None):
+        """Initialization
+
+        :param logger: Python logger object, see logging.getLogger()
+        :param auth_data_file: Python File object
+        :param datacenter: string, data center, lowercase (iad, syd, hkg, iad, dfw, lon)
+        :param use_servicenet: boolean, True use servicenet, False use publicnet
+        :param config_obj: None or instance of cloudbackup.cmd.shell.config.CloudBackupConfig 
+
+        :returns: n/a
+        """
         if datacenter not in ('ord', 'syd', 'hkg', 'iad', 'dfw', 'lon'):
             raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadParameters(
                 'Invalid Datacenter - {0}'.format(datacenter))
 
         self.api = {}
-        self.auth_data = {}
         self.log = logger
         self.datacenter = datacenter
         self.use_servicenet = use_servicenet
 
-        self.auth_data['file'] = auth_data_file
-        self.auth_data['json'] = json.load(self.auth_data['file'])
-
-        self.auth_data['user_type'] = 'user'
-        self.auth_data['user'] = self.auth_data['json']['user']
-
-        self.auth_data['user_type'] = 'user'
-        if 'user_type' in self.auth_data['json']:
-            self.auth_data['user_type'] = self.auth_data['json']['user_type']
-
-        if self.auth_data['user_type'] not in (
-                'user', 'tenantid', 'tenantname'):
-            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadAuthData(
-                'invalid user type {0}'.format(
-                    self.auth_data['user_type']))
-
-        if 'token' in self.auth_data['json']:
-            self.auth_data['method'] = 'token'
-            self.auth_data['credentials'] = self.auth_data['json']['token']
-
-        elif 'apikey' in self.auth_data['json']:
-            self.auth_data['method'] = 'apikey'
-            self.auth_data['credentials'] = self.auth_data['json']['apikey']
-
-        elif 'password' in self.auth_data['json']:
-            self.auth_data['method'] = 'password'
-            self.auth_data['credentials'] = self.auth_data['json']['password']
-
+        # Build the Configuration Engine
+        if isinstance(config_obj, cloudbackup.cmd.shell.config.CloudBackupConfig):
+            self.configurator = config_obj
         else:
-            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadAuthData('invalid json file')
+            self.configurator = cloudbackup.cmd.shell.config.CloudBackupFileConfig(
+                auth_data_file,
+                logger
+            )
 
         # Build the Auth Engine
         self.auth_engine = cloudbackup.client.auth.Authentication(
-            self.auth_data['user'],
-            self.auth_data['credentials'],
-            usertype=self.auth_data['user_type'],
-            method=self.auth_data['method'],
+            self.configurator.userId,
+            self.configurator.authCredentials,
+            usertype=self.configurator.userType,
+            method=self.configurator.authMethod,
             datacenter=self.datacenter
         )
 
