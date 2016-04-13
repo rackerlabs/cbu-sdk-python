@@ -1820,6 +1820,125 @@ class Backups(Command):
                                'for agent {0}'.format(machine_agent_id))
             return availForRestore
 
+    def GetAllCleanupsForConfiguration(self, agent_id):
+        '''
+        Retrieve all the backups - in any state - for a given Backup Configuration
+        '''
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        '/v1.0/{0}/system/activity/{1}'
+                        .format(
+                            self.authenticator.AuthTenantId,
+                           agent_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code is 200:
+                backups = []
+                for activity in res.json():
+                    if activity['Type'] == 'Cleanup':
+                        backups.append(
+                            {
+                                'id': activity['ID'],
+                                'state': activity['CurrentState'],
+                                'agent': activity['SourceMachineAgentId'],
+                                'updated_at': activity['TimeOfActivity']
+                            }
+                        )
+                return backups
+
+            else:
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return []
+
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/configurations/{2}/activities'
+                        .format(
+                            self.api_version,
+                            self.project_id,
+                            backup_config_id
+                        )
+            )
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['X-Project-Id'] = self.project_id
+            self.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code is 200:
+                resp_json = res.json()
+                activities = resp_json['activities']
+                backups = []
+                for activity in activities:
+                    if activity['type'] == 'cleanup':
+                        backups.append(
+                            {
+                                'id': activity['id'],
+                                'state': activity['state'],
+                                'agent': activity['agent'],
+                                'updated_at': activity['last_updated_time']
+                            }
+                        )
+
+                return backups
+
+            else:
+                self.log.error('status code: %d', res.status_code)
+                self.log.error('reason: ' + res.reason)
+                self.log.error('error info: %s', res.text)
+                return []
+
+    def GetCleanupReport(self, cleanup_id):
+        """
+        Retrieve the cleanup report the agent stored as a result of performing a cleanup
+        """
+        if self.api_version == 1:
+            self.ReInit(self.sslenabled,
+                        "/v1.0/cleanup/report/" + str(cleanup_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['Content-Type'] = 'application/json'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                return res.json()
+            else:
+                msg = ('Unable to retrieve cleanup report for cleanup id ({0:}).'
+                       ' Rackspace Cloud Backup API returned error status ({1:}) with text '
+                       '({2:}) with reason ({3:})'
+                       .format(cleanup_id, res.status_code, res.text,
+                               res.reason))
+                self.log.error(msg)
+                raise RuntimeError(msg)
+        else:
+            self.ReInit(self.sslenabled,
+                        '/v{0}/{1}/cleanups/{2}'
+                        .format(self.api_version, self.project_id, cleanup_id))
+            self.headers['X-Auth-Token'] = self.authenticator.AuthToken
+            self.headers['X-Project-Id'] = self.project_id
+            self.headers['Content-Type'] = 'application/json'
+            res = requests.get(self.Uri, headers=self.Headers)
+            if res.status_code == 200:
+                error_data = None
+                json_data = res.json()
+                try:
+                    if json_data['errors']['count'] > 0:
+                        error_data = self.GetBackupErrors(cleanup_id)
+                except:
+                    error_data = None
+
+                # no matching v1 object yet
+                return res.json()
+            else:
+                msg = ('Unable to retrieve cleanup report for cleanup id ({0:}).'
+                       ' RCBU API returned error status ({1:}) with text '
+                       '({2:}) with reason ({3:})'
+                       .format(cleanup_id, res.status_code, res.text,
+                               res.reason))
+                self.log.error(msg)
+                raise RuntimeError(msg)
+
 
 class RestoreConfiguration(object):
     '''

@@ -648,6 +648,54 @@ class CloudBackupApiShell(object):
                 print(report_data)
                 cloudbackup.utils.menus.promptUserAnyKey()
 
+    def RetrieveCleanupReports(self, active_agent_id):
+        while True:
+            # Get the latest set of backups so the menu is always up-to-date
+            all_cleanups = self.backup_engine.GetAllCleanupsForConfiguration(
+                active_agent_id
+            )
+
+            cleanup_config_menu = []
+            for cleanup_entry in all_cleanups:
+                cleanup_config_menu.append(
+                    {
+                        'index': len(cleanup_config_menu),
+                        'text': '{0} - {2} - {1}'.format(
+                            cleanup_entry['id'],
+                            cleanup_entry['state'],
+                            cleanup_entry['updated_at']
+                        ),
+                        'type': 'cleanup_id',
+                        'cleanup_id': cleanup_entry['id']
+                    }
+                )
+            cleanup_config_menu.append(
+                {
+                    'index': len(cleanup_config_menu),
+                    'text': 'Return to previous menu',
+                    'type': 'returnToPrevious'
+                }
+            )
+
+            cleanup_config_selection = cloudbackup.utils.menus.promptSelection(
+                cleanup_config_menu,
+                'Select Cleanup'
+            )
+            if cleanup_config_selection['type'] == 'returnToPrevious':
+                break
+
+            elif cleanup_config_selection['type'] == 'cleanup_id':
+                cleanup_report = self.backup_engine.GetCleanupReport(
+                    cleanup_config_selection['cleanup_id']
+                )
+                report_data = json.dumps(
+                    cleanup_report,
+                    sort_keys=True,
+                    indent=4
+                )
+                print(report_data)
+                cloudbackup.utils.menus.promptUserAnyKey()
+
     def EnableDisableSpecificAgentConfiguration(self, active_agent_id, config_id):
         while True:
             try:
@@ -1106,7 +1154,8 @@ class CloudBackupApiShell(object):
                     { 'index': 3, 'text': 'Access Backup Configurations', 'type': 'configuration' },
                     { 'index': 4, 'text': 'Check agent activity', 'type': 'actionCheckActivity' },
                     { 'index': 5, 'text': 'Monitor Agent Events', 'type': 'actionMonitorAgent' },
-                    { 'index': 6, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
+                    { 'index': 6, 'text': 'Get Cleanup Reports', 'type': 'actionGetCleanupReports'},
+                    { 'index': 7, 'text': 'Return to previous menu', 'type': 'returnToPrevious' }
                 ]
 
                 selection = cloudbackup.utils.menus.promptSelection(
@@ -1145,6 +1194,9 @@ class CloudBackupApiShell(object):
 
                 elif selection['type'] == 'actionMonitorAgent':
                     self.doMonitorAgent(active_agent_id)
+
+                elif selection['type'] == 'actionGetCleanupReports':
+                    self.RetrieveCleanupReports(active_agent_id)
 
             if woke_agent:
                 # stop our thread that is keeping the agent alive
