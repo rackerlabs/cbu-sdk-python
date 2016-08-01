@@ -17,10 +17,7 @@ import six
 
 from cloudbackup.common.command import Command
 
-try:
-    requests.packages.urllib3.disable_warnings()
-except:
-    requests.urllib3.disable_warnings()
+requests.packages.urllib3.disable_warnings()
 
 class ParameterError(Exception):
     """
