@@ -14,8 +14,10 @@ import uuid
 from cloudbackup.common.command import Command
 from cloudbackup.utils import tz
 
-requests.packages.urllib3.disable_warnings()
-
+try:
+    requests.packages.urllib3.disable_warnings()
+except:
+    requests.urllib3.disable_warnings()
 
 class BackupConfiguration(object):
     """
