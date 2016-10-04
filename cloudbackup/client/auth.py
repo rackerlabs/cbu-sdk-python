@@ -8,6 +8,8 @@ import requests
 import time
 import re
 
+from dateutil.parser import parse as date_parser
+
 from cloudbackup.common.command import Command
 
 requests.packages.urllib3.disable_warnings()
@@ -240,6 +242,8 @@ class Authentication(Command):
         # 2013-12-24T14:02:26.550Z
         expirationtime = datetime.datetime.utcnow()
         try:
+            expirationtime = date_parser(self.AuthExpirationTime)
+        except ValueError:
             try:
                 expirationtime = datetime.datetime.strptime(self.AuthExpirationTime, "%Y-%m-%dT%H:%M:%S.%fZ")
             except ValueError:
@@ -249,8 +253,11 @@ class Authentication(Command):
                     msg = 'Unknown time format: {1:}'.format(self.AuthExpirationTime)
                     self.log.error(msg)
                     raise AuthenticationError(msg)
+            except AuthExpirationError:
+                self.log.debug('No Auth Token data to check against.')
+                return True
         except AuthExpirationError:
-            self.log.debug('Not Auth Token data to check against.')
+            self.log.debug('No Auth Token data to check against.')
             return True
 
         nowtime = datetime.datetime.utcnow()
@@ -292,8 +299,8 @@ class Authentication(Command):
                 return self.GetToken()
             else:
                 return self.auth_data['access']['token']['id']
-        except LookupError:
-            raise AuthCredentialsErrors('Unable to retrieve authentication token')
+        except LookupError as ex:
+            raise AuthCredentialsErrors('Unable to retrieve authentication token - {0}'.format(ex))
 
     @property
     def AuthExpirationTime(self):
@@ -453,7 +460,7 @@ class Authentication(Command):
             dcuri = None
 
             for service in self.auth_data['access']['serviceCatalog']:
-                if service['name'] == 'cloudBackup':
+                if service['type'] == 'rax:backup':
                     # check for the global end-point (Phoenix)
                     if len(service['endpoints']) == 1:
                         # Global End-Point
@@ -466,7 +473,9 @@ class Authentication(Command):
                         if self._GetCloudBackupAPiVersion(dcuri) > 1:
                             # b/c the service catalog end-point is presently broken
                             # we have to hard code it
-                            dcuri = 'https://api-prod-global.drivesrvr.com/v2/{0}'.format(
+                            # preview: dcuri = 'https://api-preview-iad.drivesrvr.com/v2/{0}'.format(
+                            #dcuri = 'https://api-prod-global.drivesrvr.com/v2/{0}'.format(
+                            dcuri = 'https://api-preview-iad.drivesrvr.com/v2/{0}'.format(
                                 self.AuthTenantId
                             )
                     else:
@@ -504,8 +513,10 @@ class Authentication(Command):
                 msg = 'Unable to find DC URI for the currently authenticated user'
                 self.log.error(msg)
                 raise AuthenticationError(msg)
-            else:
+            elif dcuri.startswith('https://'):
                 return dcuri[len('https://'):].split('/')[0]
+            else:
+                return dcuri[len('http://'):].split('/')[0]
 
         except LookupError:
             msg = 'Unable to retrieve DC URI for the currently authenticated user'
@@ -515,7 +526,7 @@ class Authentication(Command):
     def _GetCloudBackupAPiVersion(self, cloudbackup_api_uri):
         self.log.debug('Detecting Cloud Backup API Version...')
         self.log.debug('API URI: {0}'.format(cloudbackup_api_uri))
-        api_regex = "https://([^/]*)/v([0-9]*)([.]?)([^/]*)/([^/]*).*"
+        api_regex = "https://([^/]*)[:\d]?/v([0-9]*)([.]?)([^/]*)/([^/]*).*"
         self.log.debug('Matching {0} with {1}'.format(
             cloudbackup_api_uri,
             api_regex
@@ -523,7 +534,8 @@ class Authentication(Command):
         regex_matcher = re.compile(api_regex)
         result = regex_matcher.match(cloudbackup_api_uri)
         api_version = result.groups()[1]
-        self.log.debug('API Version: {0}'.format(api_version))
+        #api_version = "1"
+        #self.log.debug('API Version: {0}'.format(api_version))
         return int(api_version)
 
     def GetCloudBackupApiVersion(self, dc, useServiceNet=False):
