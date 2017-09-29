@@ -597,7 +597,7 @@ class CloudFiles(Command):
             self.headers['X-Auth-Token'] = self.authenticator.AuthToken
             self.headers['ETag'] = vaultdb_data['upload-compressed-md5']
             self.headers['Content-Type'] = 'application/octet-stream'
-            self.headers['Content-Length'] = vaultdb_data['upload-compressed-bytes']
+            self.headers['Content-Length'] = str(vaultdb_data['upload-compressed-bytes'])
             self.log.debug('uri: %s', self.Uri)
             self.log.debug('headers: %s', self.Headers)
 
