@@ -67,3 +67,4 @@ If you have any questions, please check in with Benjamen Meyer
 
 .. _backup_config.json: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/examples/create_a_backup/backup_config.json
 .. _Contributing: https://github.com/rackerlabs/python-cloudbackup-sdk/blob/master/CONTRIBUTING.rst
+.. _Introduction: https://one.rackspace.com/download/attachments/21615636/python-sdk.pdf
