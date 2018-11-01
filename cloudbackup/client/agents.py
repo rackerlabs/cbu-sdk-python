@@ -555,6 +555,8 @@ class AgentDetails(object):
         """
         When was the agent last succcessful with its backup?
         """
+        if (not self.TimeOfLastSuccessfulBackup):
+            return None
         a = self.TimeOfLastSuccessfulBackup.split('(')
         b = a[1].split(')')
         unix_epoch = b[0]
