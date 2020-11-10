@@ -14,6 +14,7 @@ import cloudbackup.client.agents
 import cloudbackup.client.auth
 import cloudbackup.client.backup
 import cloudbackup.client.rse
+import cloudbackup.cmd.shell.config
 import cloudbackup.cmd.shell.exceptions
 import cloudbackup.cmd.shell.prompter as prompt_user
 import cloudbackup.utils.menus
@@ -21,70 +22,64 @@ from cloudbackup.utils import tz
 
 class CloudBackupApiShell(object):
 
-    def __init__(self, logger, auth_data_file, datacenter, use_servicenet=False):
-        if datacenter not in ('ord', 'syd', 'hkg', 'iad', 'dfw', 'lon'):
-            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadParameters(
-                'Invalid Datacenter - {0}'.format(datacenter))
+    def __init__(self, logger, config_obj=None, auth_data_file=None):
+        """Initialization
 
+        :param logger: Python logger object, see logging.getLogger()
+        :param auth_data_file: Python File object
+        :param config_obj: None or instance of cloudbackup.cmd.shell.config.CloudBackupConfig 
+
+        :returns: n/a
+        """
         self.api = {}
-        self.auth_data = {}
         self.log = logger
-        self.datacenter = datacenter
-        self.use_servicenet = use_servicenet
 
-        self.auth_data['file'] = auth_data_file
-        self.auth_data['json'] = json.load(self.auth_data['file'])
-
-        self.auth_data['user_type'] = 'user'
-        self.auth_data['user'] = self.auth_data['json']['user']
-
-        self.auth_data['user_type'] = 'user'
-        if 'user_type' in self.auth_data['json']:
-            self.auth_data['user_type'] = self.auth_data['json']['user_type']
-
-        if self.auth_data['user_type'] not in (
-                'user', 'tenantid', 'tenantname'):
-            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadAuthData(
-                'invalid user type {0}'.format(
-                    self.auth_data['user_type']))
-
-        if 'token' in self.auth_data['json']:
-            self.auth_data['method'] = 'token'
-            self.auth_data['credentials'] = self.auth_data['json']['token']
-
-        elif 'apikey' in self.auth_data['json']:
-            self.auth_data['method'] = 'apikey'
-            self.auth_data['credentials'] = self.auth_data['json']['apikey']
-
-        elif 'password' in self.auth_data['json']:
-            self.auth_data['method'] = 'password'
-            self.auth_data['credentials'] = self.auth_data['json']['password']
-
+        # Build the Configuration Engine
+        if isinstance(config_obj, cloudbackup.cmd.shell.config.CloudBackupConfig):
+            self.configurator = config_obj
         else:
-            raise cloudbackup.cmd.shell.exceptions.CloudBackupApiBadAuthData('invalid json file')
+            self.configurator = cloudbackup.cmd.shell.config.CloudBackupFileConfig(
+                auth_data_file,
+                logger
+            )
 
         # Build the Auth Engine
         self.auth_engine = cloudbackup.client.auth.Authentication(
-            self.auth_data['user'],
-            self.auth_data['credentials'],
-            usertype=self.auth_data['user_type'],
-            method=self.auth_data['method'],
-            datacenter=self.datacenter
+            self.configurator.userId,
+            self.configurator.authCredentials,
+            usertype=self.configurator.userType,
+            method=self.configurator.authMethod,
+            datacenter=self.configurator.datacenter
         )
+
 
         # Get the URI for Cloud Backup API
-        self.api['uri'] = self.auth_engine.GetCloudBackupApiUri(
-            self.datacenter,
-            self.use_servicenet
-        )
-        self.log.debug('Cloud Backup API URI: {0}'.format(self.api['uri']))
-        self.api['version'] = self.auth_engine.GetCloudBackupApiVersion(
-            self.datacenter,
-            self.use_servicenet
-        )
-        self.log.debug('Cloud Backup API Version: {0}'.format(self.api['version']))
-        # TODO: Add support for Test/Pre-Prod API
+        # Both API Host and API Version  must come from the same source
+        if self.configurator.apiHost is None:
+            # Retrieve the API URL from the Service Catalog
+            # this also causes an Authentication to occur
+            self.api['uri'] = self.auth_engine.GetCloudBackupApiUri(
+                self.configurator.datacenter,
+                self.configurator.useServiceNet
+            )
+            self.api['version'] = self.auth_engine.GetCloudBackupApiVersion(
+                self.configurator.datacenter,
+                self.configurator.useServiceNet
+            )
+        else:
+            # Retrieve the API Host and version from the configuration data
+            # This does *NOT* incur an authentication
+            self.api['uri'] = self.configurator.apiHost
+            self.api['version'] = self.configurator.apiVersion 
 
+            # So it must be done manually in order to keep things running
+            self.auth_engine.AuthToken
+
+        # Log the API Host and Version
+        self.log.debug('Cloud Backup API URI: {0}'.format(self.api['uri']))
+        self.log.debug('Cloud Backup API Version: {0}'.format(self.api['version']))
+
+        # Access the Agents API
         self.agents = cloudbackup.client.agents.Agents(
             True,  # use HTTPS
             self.auth_engine,
@@ -93,6 +88,7 @@ class CloudBackupApiShell(object):
             self.auth_engine.AuthTenantId
         )
 
+        # Access the Backups API
         self.backup_engine = cloudbackup.client.backup.Backups(
             True,  # use HTTPS
             self.auth_engine,
@@ -105,10 +101,18 @@ class CloudBackupApiShell(object):
         self.snapshot_ids = {}
 
     def GetAgentIds(self):
+        """Retrieve a list of Agent IDs from the API
+
+        :returns: [] - list of agent IDs
+        """
         self.api['available-agents'] = self.agents.GetAgentsFromApi()
         return self.api['available-agents']
 
     def GetAgentIdFromUser(self):
+        """Prompt the user for an agent id
+
+        :returns: menu selection with the agent data
+        """
         agent_menu = []
         for agent_id in self.GetAgentIds():
             agent_id_entry = {
@@ -129,6 +133,15 @@ class CloudBackupApiShell(object):
         return selection
 
     def doCreateV1BackupConfiguration(self, active_agent_id, config_data):
+        """Create a backup configuration for the agent using the config data
+
+        :param active_agent_id: string - Agent ID as a string
+        :param config_data: dict - dictionary containing the configuration information
+
+        :returns: n/a
+        """
+
+        # V1 uses numerals for the days-of-the-week
         DayOfWeekMapping = {
             'Sunday': 0,
             'Monday': 1,
@@ -139,9 +152,10 @@ class CloudBackupApiShell(object):
             'Saturday': 6
         }
 
+        # Base configuration
         backup_config = cloudbackup.client.backup.BackupConfiguration()
 
-        # Convert from 24-hour Format to 12-hour AM/PM Format
+        # Convert from 24-hour Format to 12-hour AM/PM Format used by V1
         if config_data['schedule']['start-time']['hour'] == 0:
             config_data['schedule']['start-time']['hour'] = 12
             config_data['schedule']['start-time']['am-pm'] = 'AM'
@@ -156,6 +170,7 @@ class CloudBackupApiShell(object):
         elif config_data['schedule']['start-time']['hour'] in range(1,12):
             config_data['schedule']['start-time']['am-pm'] = 'AM'
 
+        # Copy the configuration data into the backup configuraiton
         backup_config.ConfigurationName = config_data['name']
         backup_config.MachineAgentId = int(active_agent_id)
         backup_config.Active = True
@@ -191,11 +206,22 @@ class CloudBackupApiShell(object):
                 backup_config.AddFile(item_name, excluded=True)
             else:
                 backup_config.AddFolder(item_name, excluded=True)
+
+        # Call the V1 API and try to make the configuration
         if not self.backup_engine.CreateBackupConfiguration(
                 backup_config):
             print('Failed to create backup configuration. See logs for details')
 
     def doCreateV2BackupConfiguration(self, active_agent_id, config_data):
+        """Create a backup configuration for the agent using the config data
+
+        :param active_agent_id: string - Agent UUID 
+        :param config_data: dict - dictionary containing the configuration information
+
+        :returns: n/a
+        """
+
+        # V2 uses an abbreviation for the days-of-the-week
         DayOfWeekMapping = {
             'Sunday': 'SU',
             'Monday': 'MO',
@@ -206,10 +232,10 @@ class CloudBackupApiShell(object):
             'Saturday': 'SA'
         }
 
+        # Base configuration
         backup_config = cloudbackup.client.backup.BackupConfigurationV2()
 
-        #random.seed()
-        #backup_config.ConfigurationId = random.randint(100, 10000)
+        # Copy the configuration data into the backup configuraiton
         backup_config.ConfigurationId = None
         backup_config.ConfigurationName = config_data['name']
         backup_config.MachineAgentId = active_agent_id
@@ -243,14 +269,26 @@ class CloudBackupApiShell(object):
                 backup_config.AddFile(item_name, excluded=True)
             else:
                 backup_config.AddFolder(item_name, excluded=True)
+
+        # Call the V2 API and try to make the configuration
         if not self.backup_engine.CreateBackupConfiguration(
                 backup_config):
             print('Failed to create backup configuration. See logs for details')
 
     def doCreateBackupConfiguration(self, active_agent_id):
+        """Prompt the user for the backup configuration data and create a backup
+
+        :param active_agent_id: string - Agent ID the user is modifying
+
+        :returns: n/a
+        """
+
+        # short cut to determine if the user entered a value that
+        # should cause the process to abort
         def check_user_aborted(value):
             return value is None
 
+        # Default values
         prompted_config_data = {
             'name': None,
             'schedule': {
@@ -279,17 +317,20 @@ class CloudBackupApiShell(object):
         }
         user_aborted = False
 
+        # Prompt User for Configuration Name
         prompted_config_data['name'] = prompt_user.doPromptBackupConfigurationName(
             user_aborted
         )
         user_aborted = check_user_aborted(prompted_config_data['name'])
 
+        # Prompt User for how often to backup
         frequency_data = prompt_user.doPromptFrequency(
             self.api['version'],
             user_aborted
         )
         user_aborted = check_user_aborted(frequency_data)
         if not user_aborted:
+            # Prompt for the various pieces of scheduling information
             prompted_config_data['schedule']['frequency'] = frequency_data['frequency']
             prompted_config_data['schedule']['day-of-week'] = frequency_data['dayOfWeek']
             prompted_config_data['schedule']['start-time']['hour'] = frequency_data['StartTime']['hour']
@@ -298,10 +339,12 @@ class CloudBackupApiShell(object):
             prompted_config_data['schedule']['start-time']['timezone'] = frequency_data['StartTime']['timeZone']
             prompted_config_data['schedule']['hourly-interval'] = frequency_data['interval']
 
+        # Prompt User for how long to keep the data
         prompted_config_data['retention'] = prompt_user.doPromptRetention(
             user_aborted
         )
 
+        # Prompt User for e-mail addresses to notify and on what conditions
         notification_data = prompt_user.doPromptNotifications(
             user_aborted
         )
@@ -311,6 +354,7 @@ class CloudBackupApiShell(object):
             prompted_config_data['notifications']['success'] = notification_data['onSuccess']
             prompted_config_data['notifications']['failure'] = notification_data['onFailure']
 
+        # Prompt the user for which files and folders to include
         inclusion_data = prompt_user.doPromptFilesAndFolders(
             user_aborted,
             inclusion=True
@@ -319,6 +363,7 @@ class CloudBackupApiShell(object):
         if not user_aborted:
             prompted_config_data['paths']['inclusions'] = inclusion_data
 
+        # Prompt the user for which files and folders to exclude
         exclusion_data = prompt_user.doPromptFilesAndFolders(
             user_aborted,
             inclusion=False
@@ -327,6 +372,8 @@ class CloudBackupApiShell(object):
         if not user_aborted:
             prompted_config_data['paths']['exclusions'] = exclusion_data
 
+        # If user has not aborted, then call the appropriate creation
+        # function for the API Version in use
         if not user_aborted:
             if self.api['version'] == 1:
                 self.doCreateV1BackupConfiguration(
@@ -346,6 +393,14 @@ class CloudBackupApiShell(object):
             print('User Aborted')
 
     def doPrintBackupConfigurationV1Details(self, active_agent_id, backup_config):
+        """Print the details of the backup configuration
+
+        :param active_agent_id: string - Agent ID the user is modifying
+        :param backup_config: V1 Backup Configuration object
+
+        :returns: n/a
+        """
+
         print('Agent Configuration:')
         print('\tAgent ID: {0}'.format(active_agent_id))
         print('\t\t ID: {0}'.format(backup_config['Id']))
@@ -386,6 +441,14 @@ class CloudBackupApiShell(object):
         print('\n')
 
     def doPrintBackupConfigurationV2Details(self, active_agent_id, backup_config):
+        """Print the details of the backup configuration
+
+        :param active_agent_id: string - Agent ID the user is modifying
+        :param backup_config: V2 Backup Configuration object
+
+        :returns: n/a
+        """
+
         print('Agent Configuration:')
         try:
             print('\tAgent ID: {0}'.format(active_agent_id))
@@ -420,12 +483,23 @@ class CloudBackupApiShell(object):
         print('\n')
 
     def doPrintBackupConfigurationDetails(self, active_agent_id, backup_id, backup_name):
+        """Print the details of the backup configuration
+
+        :param active_agent_id: string - Agent ID the user is modifying
+        :param backup_id: string - Backup Configuration ID
+        :param backup_name: string - Backup Configuration Name
+
+        :returns: n/a
+        """
+
+        # Access the backup configuration by its ID
         backup_config = self.agents.AgentConfiguration(
             active_agent_id
         ).GetBackupConfigurationById(
             backup_id
         )
 
+        # Print the detail appropriate for each API Version
         if self.api['version'] == 1:
             self.doPrintBackupConfigurationV1Details(
                 active_agent_id,
@@ -442,27 +516,38 @@ class CloudBackupApiShell(object):
             print('Unknown Cloud Backup API Version')
 
     def doPrintAgentGlobalConfiguration(self, active_agent_id, show_password=False):
+        """Print global Agent Configuration Details
+
+        :param active_agent_id: string - Agent ID the user is modifying
+        :param show_password: boolean - whether or not to show password data
+
+        :returns: n/a
+        """
+
+        # Access the agent's configuration
         self.agents.GetAgentConfiguration(
             active_agent_id
         )
-
         agent_configuration = self.agents.AgentConfiguration(
             active_agent_id
         )
 
+        # Field names, default to v1 names
         interval_field = 'Interval'
         timeout_field = 'Timeout'
         idle_field = 'Idle'
         active_field = 'Active'
         realtime_field = 'RealTime'
 
-        if self.api['version'] == 2:
+        # Update the field names depending on the API version
+        if self.api['version'] >= 2:
             interval_field = 'interval_ms'
             timeout_field = 'timeout_ms'
             idle_field = idle_field.lower()
             active_field = active_field.lower()
             realtime_field = 'real_time'
 
+        # Print out the information
         print('Agent Configuration:')
         print('\tAgent ID: {0}'.format(active_agent_id))
         print('\tLog Level: {0}'.format(agent_configuration.ConfigLogLevel))
